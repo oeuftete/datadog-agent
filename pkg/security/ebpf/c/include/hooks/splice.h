@@ -7,6 +7,7 @@
 #include "helpers/discarders.h"
 #include "helpers/filesystem.h"
 #include "helpers/syscalls.h"
+#include "helpers/path_resolver.h"
 
 SYSCALL_KPROBE0(splice) {
     struct policy_t policy = fetch_policy(EVENT_SPLICE);
@@ -101,6 +102,7 @@ int __attribute__((always_inline)) sys_splice_ret(void *ctx, int retval) {
     struct proc_cache_t *entry = fill_process_context(&event.process);
     fill_container_context(entry, &event.container);
     fill_span_context(&event.span);
+    fill_path_ring_buffer_ref(&event.file.path_ref);
 
     send_event(ctx, EVENT_SPLICE, event);
 

@@ -683,6 +683,7 @@ type FileFields struct {
 	MTime uint64 `field:"modification_time"`                                           // SECLDoc[modification_time] Definition:`Modification time of the file`
 
 	PathKey
+	PathRingBufferRef
 	InUpperLayer bool `field:"in_upper_layer,handler:ResolveFileFieldsInUpperLayer"` // SECLDoc[in_upper_layer] Definition:`Indicator of the file layer, for example, in an OverlayFS`
 
 	NLink uint32 `field:"-" json:"-"`
@@ -1242,6 +1243,13 @@ const PathKeySize = 16
 // AnomalyDetectionSyscallEvent represents an anomaly detection for a syscall event
 type AnomalyDetectionSyscallEvent struct {
 	SyscallID Syscall
+}
+
+type PathRingBufferRef struct {
+	Hash       uint64 `field:"-"`
+	Length     uint64 `field:"-"`
+	ReadCursor uint64 `field:"-"`
+	CPU        uint32 `field:"-"`
 }
 
 // PathKey identifies an entry in the dentry cache

@@ -43,6 +43,7 @@ int kprobe_security_inode_getattr(struct pt_regs *ctx) {
             .mount_id = mount_id,
         },
         .flags = flags,
+        .path_ref = {0},
     };
 
     fill_file_metadata(dentry, &entry.metadata);

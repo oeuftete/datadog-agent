@@ -158,7 +158,7 @@ func isValidTTYName(ttyName string) bool {
 
 // UnmarshalProcEntryBinary unmarshalls process_entry_t from process.h
 func (e *Process) UnmarshalProcEntryBinary(data []byte) (int, error) {
-	const size = 160
+	const size = 192
 	if len(data) < size {
 		return 0, ErrNotEnoughData
 	}
@@ -224,7 +224,7 @@ func (e *Process) UnmarshalPidCacheBinary(data []byte) (int, error) {
 
 // UnmarshalBinary unmarshalls a binary representation of itself
 func (e *Process) UnmarshalBinary(data []byte) (int, error) {
-	const size = 256 // size of struct exec_event_t starting from process_entry_t, inclusive
+	const size = 288 // size of struct exec_event_t starting from process_entry_t, inclusive
 	if len(data) < size {
 		return 0, ErrNotEnoughData
 	}
@@ -335,9 +335,21 @@ func (p *PathKey) UnmarshalBinary(data []byte) (int, error) {
 	return 16, nil
 }
 
+func (pr *PathRingBufferRef) UnmarshalBinary(data []byte) (int, error) {
+	if len(data) < 32 {
+		return 0, ErrNotEnoughData
+	}
+	pr.Hash = ByteOrder.Uint64(data[0:8])
+	pr.Length = ByteOrder.Uint64(data[8:16])
+	pr.ReadCursor = ByteOrder.Uint64(data[16:24])
+	pr.CPU = ByteOrder.Uint32(data[24:28])
+
+	return 28, nil
+}
+
 // UnmarshalBinary unmarshalls a binary representation of itself
 func (e *FileFields) UnmarshalBinary(data []byte) (int, error) {
-	if len(data) < 72 {
+	if len(data) < 104 {
 		return 0, ErrNotEnoughData
 	}
 
@@ -366,7 +378,14 @@ func (e *FileFields) UnmarshalBinary(data []byte) (int, error) {
 	timeNsec = ByteOrder.Uint64(data[48:56])
 	e.MTime = uint64(time.Unix(int64(timeSec), int64(timeNsec)).UnixNano())
 
-	return 72, nil
+	data = data[56:]
+
+	n, err = e.PathRingBufferRef.UnmarshalBinary(data)
+	if err != nil {
+		return n, err
+	}
+
+	return 104, nil
 }
 
 // UnmarshalBinary unmarshalls a binary representation of itself
@@ -523,7 +542,11 @@ func (e *RenameEvent) UnmarshalBinary(data []byte) (int, error) {
 
 // UnmarshalBinary unmarshalls a binary representation of itself
 func (e *RmdirEvent) UnmarshalBinary(data []byte) (int, error) {
-	return UnmarshalBinary(data, &e.SyscallEvent, &e.File)
+	n, err := UnmarshalBinary(data, &e.SyscallEvent, &e.File)
+	if err == nil {
+		fmt.Printf(">>> Unmarshal rmdir: %+v\n", e.File.FileFields.PathRingBufferRef)
+	}
+	return n, err
 }
 
 // UnmarshalBinary unmarshalls a binary representation of itself

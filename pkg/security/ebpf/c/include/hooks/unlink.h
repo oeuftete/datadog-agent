@@ -7,6 +7,7 @@
 #include "helpers/discarders.h"
 #include "helpers/filesystem.h"
 #include "helpers/syscalls.h"
+#include "helpers/path_resolver.h"
 
 int __attribute__((always_inline)) trace__sys_unlink(u8 async, int flags) {
     struct syscall_cache_t syscall = {
@@ -123,6 +124,7 @@ int __attribute__((always_inline)) sys_unlink_ret(void *ctx, int retval) {
             struct proc_cache_t *entry = fill_process_context(&event.process);
             fill_container_context(entry, &event.container);
             fill_span_context(&event.span);
+            fill_path_ring_buffer_ref(&event.file.path_ref);
 
             send_event(ctx, EVENT_RMDIR, event);
         } else {
@@ -136,6 +138,7 @@ int __attribute__((always_inline)) sys_unlink_ret(void *ctx, int retval) {
             struct proc_cache_t *entry = fill_process_context(&event.process);
             fill_container_context(entry, &event.container);
             fill_span_context(&event.span);
+            fill_path_ring_buffer_ref(&event.file.path_ref);
 
             send_event(ctx, EVENT_UNLINK, event);
         }

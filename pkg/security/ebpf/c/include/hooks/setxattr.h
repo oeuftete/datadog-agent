@@ -5,6 +5,7 @@
 #include "helpers/events_predicates.h"
 #include "helpers/filesystem.h"
 #include "helpers/syscalls.h"
+#include "helpers/path_resolver.h"
 
 int __attribute__((always_inline)) trace__sys_setxattr(const char *xattr_name) {
     struct policy_t policy = fetch_policy(EVENT_SETXATTR);
@@ -148,6 +149,7 @@ int __attribute__((always_inline)) sys_xattr_ret(void *ctx, int retval, u64 even
     fill_container_context(entry, &event.container);
     fill_file_metadata(syscall->xattr.dentry, &event.file.metadata);
     fill_span_context(&event.span);
+    fill_path_ring_buffer_ref(&event.file.path_ref);
 
     send_event(ctx, event_type, event);
 

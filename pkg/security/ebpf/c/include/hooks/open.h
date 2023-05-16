@@ -8,6 +8,7 @@
 #include "helpers/exec.h"
 #include "helpers/iouring.h"
 #include "helpers/syscalls.h"
+#include "helpers/path_resolver.h"
 
 int __attribute__((always_inline)) trace__sys_openat2(u8 async, int flags, umode_t mode, u64 pid_tgid) {
     struct policy_t policy = fetch_policy(EVENT_OPEN);
@@ -293,6 +294,7 @@ int __attribute__((always_inline)) dr_open_callback(void *ctx, int retval) {
     }
     fill_container_context(entry, &event.container);
     fill_span_context(&event.span);
+    fill_path_ring_buffer_ref(&event.file.path_ref);
 
     send_event(ctx, EVENT_OPEN, event);
     return 0;

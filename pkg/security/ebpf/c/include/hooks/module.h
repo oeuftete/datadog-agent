@@ -4,6 +4,7 @@
 #include "constants/syscall_macro.h"
 #include "helpers/filesystem.h"
 #include "helpers/syscalls.h"
+#include "helpers/path_resolver.h"
 
 int __attribute__((always_inline)) trace_init_module(u32 loaded_from_memory) {
     struct policy_t policy = fetch_policy(EVENT_INIT_MODULE);
@@ -126,6 +127,7 @@ int __attribute__((always_inline)) trace_init_module_ret(void *ctx, int retval, 
     struct proc_cache_t *entry = fill_process_context(&event.process);
     fill_container_context(entry, &event.container);
     fill_span_context(&event.span);
+    fill_path_ring_buffer_ref(&event.file.path_ref);
 
     send_event(ctx, EVENT_INIT_MODULE, event);
     return 0;

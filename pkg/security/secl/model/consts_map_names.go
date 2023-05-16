@@ -49,6 +49,8 @@ var bpfMapNames = []string{
 	"open_flags_appr",
 	"packets",
 	"path_id",
+	"path_refs",
+	"path_rings",
 	"pathnames",
 	"pid_cache",
 	"pid_discarders",

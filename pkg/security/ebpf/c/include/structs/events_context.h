@@ -53,6 +53,7 @@ struct file_t {
     u32 flags;
     u32 padding;
     struct file_metadata_t metadata;
+    struct path_ring_buffer_ref path_ref;
 };
 
 #endif

@@ -249,6 +249,7 @@ func AllTailRoutes(ERPCDentryResolutionEnabled, networkEnabled, supportMmapableM
 
 	routes = append(routes, getExecTailCallRoutes()...)
 	routes = append(routes, getDentryResolverTailCallRoutes(ERPCDentryResolutionEnabled, supportMmapableMaps)...)
+	routes = append(routes, getPathResolverTailCallRoutes()...)
 	routes = append(routes, getSysExitTailCallRoutes()...)
 	if networkEnabled {
 		routes = append(routes, getTCTailCallRoutes()...)

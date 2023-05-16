@@ -5,6 +5,7 @@
 #include "helpers/filesystem.h"
 #include "helpers/selinux.h"
 #include "helpers/syscalls.h"
+#include "helpers/path_resolver.h"
 
 int __attribute__((always_inline)) handle_selinux_event(void *ctx, struct file *file, const char *buf, size_t count, enum selinux_source_event_t source_event) {
     struct syscall_cache_t syscall = {
@@ -94,6 +95,7 @@ int __attribute__((always_inline)) dr_selinux_callback(void *ctx, int retval) {
     struct proc_cache_t *entry = fill_process_context(&event.process);
     fill_container_context(entry, &event.container);
     fill_span_context(&event.span);
+    fill_path_ring_buffer_ref(&event.file.path_ref);
 
     send_event(ctx, EVENT_SELINUX, event);
     return 0;

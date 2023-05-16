@@ -1158,7 +1158,7 @@ func (p *Resolver) syncCache(proc *process.Process, filledProc *utils.FilledProc
 	p.insertEntry(entry, p.entryCache[pid], model.ProcessCacheEntryFromSnapshot)
 
 	// insert new entry in kernel maps
-	procCacheEntryB := make([]byte, 224)
+	procCacheEntryB := make([]byte, 256)
 	_, err := entry.Process.MarshalProcCache(procCacheEntryB)
 	if err != nil {
 		seclog.Errorf("couldn't marshal proc_cache entry: %s", err)

@@ -24,6 +24,7 @@ BPF_ARRAY_MAP(pipefs_mountid, u32, 1)
 BPF_ARRAY_MAP(selinux_enforce_status, u16, 2)
 BPF_ARRAY_MAP(splice_entry_flags_approvers, u32, 1)
 BPF_ARRAY_MAP(splice_exit_flags_approvers, u32, 1)
+BPF_ARRAY_MAP(path_rings, struct path_ring_buffer, 16) // TODO: edit this at runtime with the number of cores
 
 BPF_HASH_MAP(activity_dumps_config, u32, struct activity_dump_config, 1) // max entries will be overridden at runtime
 BPF_HASH_MAP(activity_dump_config_defaults, u32, struct activity_dump_config, 1)
@@ -79,6 +80,7 @@ BPF_PERCPU_ARRAY_MAP(is_discarded_by_inode_gen, u32, struct is_discarded_by_inod
 BPF_PERCPU_ARRAY_MAP(dns_event, u32, struct dns_event_t, 1)
 BPF_PERCPU_ARRAY_MAP(packets, u32, struct packet_t, 1)
 BPF_PERCPU_ARRAY_MAP(selinux_write_buffer, u32, struct selinux_write_buffer_t, 1)
+BPF_PERCPU_ARRAY_MAP(path_refs, u32, struct path_ring_buffer_ref, 1)
 
 BPF_PROG_ARRAY(args_envs_progs, 3)
 BPF_PROG_ARRAY(dentry_resolver_kprobe_callbacks, EVENT_MAX)
@@ -87,5 +89,7 @@ BPF_PROG_ARRAY(dentry_resolver_kprobe_progs, 5)
 BPF_PROG_ARRAY(dentry_resolver_tracepoint_progs, 2)
 BPF_PROG_ARRAY(classifier_router, 100)
 BPF_PROG_ARRAY(sys_exit_progs, 64)
+BPF_PROG_ARRAY(path_resolver_kprobe_progs, 2)
+BPF_PROG_ARRAY(path_resolver_tracepoint_progs, 2)
 
 #endif

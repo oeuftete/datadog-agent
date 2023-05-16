@@ -7,6 +7,7 @@
 #include "buffer_selector.h"
 #include "container.h"
 #include "dentry_resolver.h"
+#include "path_resolver.h"
 #include "discaders.h"
 #include "dns.h"
 #include "erpc.h"

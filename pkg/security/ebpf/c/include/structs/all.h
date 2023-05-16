@@ -4,6 +4,7 @@
 #include "activity_dump.h"
 #include "bpf.h"
 #include "dentry_resolver.h"
+#include "path_resolver.h"
 #include "dns.h"
 #include "erpc.h"
 #include "events_context.h"
