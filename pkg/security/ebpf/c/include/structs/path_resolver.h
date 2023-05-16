@@ -3,12 +3,21 @@
 
 #define PR_RING_BUFFER_SIZE 131072
 
-struct path_ring_buffer {
-    u64 write_cursor;
+struct pr_ring_buffer {
     char buffer[PR_RING_BUFFER_SIZE];
 };
 
-struct path_ring_buffer_ref {
+// struct stored in per-cpu map
+struct pr_ring_buffer_ctx {
+    u64 hash;
+    u64 len;
+    u64 read_cursor;
+    u64 write_cursor;
+    u32 cpu;
+};
+
+// struct used by events structs
+struct pr_ring_buffer_ref_t {
     u64 hash;
     u64 len;
     u64 read_cursor;

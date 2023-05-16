@@ -542,11 +542,7 @@ func (e *RenameEvent) UnmarshalBinary(data []byte) (int, error) {
 
 // UnmarshalBinary unmarshalls a binary representation of itself
 func (e *RmdirEvent) UnmarshalBinary(data []byte) (int, error) {
-	n, err := UnmarshalBinary(data, &e.SyscallEvent, &e.File)
-	if err == nil {
-		fmt.Printf(">>> Unmarshal rmdir: %+v\n", e.File.FileFields.PathRingBufferRef)
-	}
-	return n, err
+	return UnmarshalBinary(data, &e.SyscallEvent, &e.File)
 }
 
 // UnmarshalBinary unmarshalls a binary representation of itself

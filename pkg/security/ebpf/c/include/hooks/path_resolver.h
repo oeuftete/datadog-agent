@@ -28,15 +28,15 @@ int __attribute__((always_inline)) resolve_path_tail_call(void *ctx, struct dent
         return DENTRY_INVALID;
     }
 
-    struct path_ring_buffer_ref *path_ref = bpf_map_lookup_elem(&path_refs, &zero);
-    if (!path_ref) {
-        return 0;
+    struct pr_ring_buffer_ctx *ringbuf_ctx = bpf_map_lookup_elem(&pr_ringbuf_ctx, &zero);
+    if (!ringbuf_ctx) {
+        return DENTRY_ERROR;
     }
 
     u32 cpu = bpf_get_smp_processor_id();
-    struct path_ring_buffer *rb = bpf_map_lookup_elem(&path_rings, &cpu);
+    struct pr_ring_buffer *rb = bpf_map_lookup_elem(&pr_ringbufs, &cpu);
     if (!rb) {
-        return 0;
+        return DENTRY_ERROR;
     }
 
     struct is_discarded_by_inode_t *params = bpf_map_lookup_elem(&is_discarded_by_inode_gen, &zero);
@@ -48,7 +48,7 @@ int __attribute__((always_inline)) resolve_path_tail_call(void *ctx, struct dent
         .now = bpf_ktime_get_ns(),
     };
 
-    u64 write_cursor = rb->write_cursor;
+    u64 write_cursor = ringbuf_ctx->write_cursor;
 
 #pragma unroll
     for (int i = 0; i < PR_MAX_ITERATION_DEPTH; i++) {
@@ -81,27 +81,27 @@ int __attribute__((always_inline)) resolve_path_tail_call(void *ctx, struct dent
         if (dname.name[0] == 0) {
             return DENTRY_ERROR;
         }
-        len -= 1; // do not count trailing zero
+        len -= 1; // do not process trailing zero
 
         if (dname.name[0] == '/') {
             // mark the path resolution as complete which will stop the tail calls
             input->key.ino = 0;
-            rb->write_cursor = write_cursor % PR_RING_BUFFER_SIZE;
+            ringbuf_ctx->write_cursor = write_cursor % PR_RING_BUFFER_SIZE;
             return i + 1;
         }
 
 #pragma unroll
         for (int j = 0; j < PR_MAX_SEGMENT_LENGTH; j++) {
-            path_ref->hash ^= dname.name[j];
-            path_ref->hash *= FNV_PRIME;
+            ringbuf_ctx->hash ^= dname.name[j];
+            ringbuf_ctx->hash *= FNV_PRIME;
             rb->buffer[write_cursor++ % PR_RING_BUFFER_SIZE] = dname.name[j];
             if (j == (len - 1))
                 break;
         }
-        path_ref->hash ^= '/';
-        path_ref->hash *= FNV_PRIME;
+        ringbuf_ctx->hash ^= '/';
+        ringbuf_ctx->hash *= FNV_PRIME;
         rb->buffer[write_cursor++ % PR_RING_BUFFER_SIZE] = '/';
-        path_ref->len += len + 1;
+        ringbuf_ctx->len += len + 1;
 
         dentry = d_parent;
     }
@@ -113,7 +113,7 @@ int __attribute__((always_inline)) resolve_path_tail_call(void *ctx, struct dent
     // prepare for the next iteration
     input->dentry = d_parent;
     input->key = next_key;
-    rb->write_cursor = write_cursor % PR_RING_BUFFER_SIZE;
+    ringbuf_ctx->write_cursor = write_cursor % PR_RING_BUFFER_SIZE;
     return PR_MAX_ITERATION_DEPTH;
 }
 
@@ -149,21 +149,15 @@ int kprobe_path_resolver_entrypoint(struct pt_regs *ctx) {
     }
 
     u32 zero = 0;
-    struct path_ring_buffer_ref *path_ref = bpf_map_lookup_elem(&path_refs, &zero);
-    if (!path_ref) {
+    struct pr_ring_buffer_ctx *ringbuf_ctx = bpf_map_lookup_elem(&pr_ringbuf_ctx, &zero);
+    if (!ringbuf_ctx) {
         return 0;
     }
 
-    u32 cpu = bpf_get_smp_processor_id();
-    struct path_ring_buffer *rb = bpf_map_lookup_elem(&path_rings, &cpu);
-    if (!rb) {
-        return 0;
-    }
-
-    path_ref->hash = FNV_OFFSET_BASIS;
-    path_ref->len = 0;
-    path_ref->read_cursor = rb->write_cursor;
-    path_ref->cpu = cpu;
+    ringbuf_ctx->hash = FNV_OFFSET_BASIS;
+    ringbuf_ctx->len = 0;
+    ringbuf_ctx->read_cursor = ringbuf_ctx->write_cursor;
+    ringbuf_ctx->cpu = bpf_get_smp_processor_id();
 
     syscall->resolver.iteration = 0;
     bpf_tail_call_compat(ctx, &path_resolver_kprobe_progs, PR_PROGKEY_LOOP);
@@ -182,21 +176,15 @@ int tracepoint_path_resolver_entrypoint(void *ctx) {
     }
 
     u32 zero = 0;
-    struct path_ring_buffer_ref *path_ref = bpf_map_lookup_elem(&path_refs, &zero);
-    if (!path_ref) {
+    struct pr_ring_buffer_ctx *ringbuf_ctx = bpf_map_lookup_elem(&pr_ringbuf_ctx, &zero);
+    if (!ringbuf_ctx) {
         return 0;
     }
 
-    u32 cpu = bpf_get_smp_processor_id();
-    struct path_ring_buffer *rb = bpf_map_lookup_elem(&path_rings, &cpu);
-    if (!rb) {
-        return 0;
-    }
-
-    path_ref->hash = FNV_OFFSET_BASIS;
-    path_ref->len = 0;
-    path_ref->read_cursor = rb->write_cursor;
-    path_ref->cpu = cpu;
+    ringbuf_ctx->hash = FNV_OFFSET_BASIS;
+    ringbuf_ctx->len = 0;
+    ringbuf_ctx->read_cursor = ringbuf_ctx->write_cursor;
+    ringbuf_ctx->cpu = bpf_get_smp_processor_id();
 
     syscall->resolver.iteration = 0;
     bpf_tail_call_compat(ctx, &path_resolver_tracepoint_progs, PR_PROGKEY_LOOP);

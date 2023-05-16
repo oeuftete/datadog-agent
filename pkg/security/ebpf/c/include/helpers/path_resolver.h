@@ -13,13 +13,16 @@ int __attribute__((always_inline)) resolve_path(void *ctx, int dr_type) {
     return 0;
 }
 
-void __attribute__((always_inline)) fill_path_ring_buffer_ref(struct path_ring_buffer_ref *event_path_ref) {
+void __attribute__((always_inline)) fill_path_ring_buffer_ref(struct pr_ring_buffer_ref_t *event_path_ref) {
     u32 zero = 0;
-    struct path_ring_buffer_ref *path_ref = bpf_map_lookup_elem(&path_refs, &zero);
-    if (!path_ref) {
+    struct pr_ring_buffer_ctx *ringbuf_ctx = bpf_map_lookup_elem(&pr_ringbuf_ctx, &zero);
+    if (!ringbuf_ctx) {
         return;
     }
-    bpf_probe_read(event_path_ref, sizeof(struct path_ring_buffer_ref), path_ref);
+    event_path_ref->hash = ringbuf_ctx->hash;
+    event_path_ref->len = ringbuf_ctx->len;
+    event_path_ref->read_cursor = ringbuf_ctx->read_cursor;
+    event_path_ref->cpu = ringbuf_ctx->cpu;
 }
 
 #endif

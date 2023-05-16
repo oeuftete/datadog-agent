@@ -10,11 +10,18 @@ package path
 import (
 	"errors"
 	"fmt"
+	"hash"
+	"hash/fnv"
 	"strings"
+	"syscall"
 
+	"github.com/DataDog/datadog-agent/pkg/security/probe/managerhelper"
 	"github.com/DataDog/datadog-agent/pkg/security/resolvers/dentry"
 	"github.com/DataDog/datadog-agent/pkg/security/resolvers/mount"
 	"github.com/DataDog/datadog-agent/pkg/security/secl/model"
+	"github.com/DataDog/datadog-agent/pkg/security/utils"
+	manager "github.com/DataDog/ebpf-manager"
+	"golang.org/x/sys/unix"
 )
 
 type ResolverInterface interface {
@@ -24,6 +31,8 @@ type ResolverInterface interface {
 	ResolveMountRoot(ev *model.Event, e *model.Mount) (string, error)
 	SetMountPoint(ev *model.Event, e *model.Mount) error
 	ResolveMountPoint(ev *model.Event, e *model.Mount) (string, error)
+	Start(*manager.Manager) error
+	Close() error
 }
 
 // NoResolver returns an empty resolver
@@ -60,15 +69,112 @@ func (n *NoResolver) ResolveMountPoint(ev *model.Event, e *model.Mount) (string,
 	return "", nil
 }
 
+func (n *NoResolver) Start(m *manager.Manager) error {
+	return nil
+}
+
+func (n *NoResolver) Close() error {
+	return nil
+}
+
+type pathResolver struct {
+	fnv1a     hash.Hash64
+	pathRings []byte
+	numCPU    uint64
+}
+
+const RingBufferSize = uint64(131072)
+
+func newPathResolver() *pathResolver {
+	return &pathResolver{
+		fnv1a: fnv.New64a(),
+	}
+}
+
+func (pr *pathResolver) start(m *manager.Manager) error {
+	if pr.pathRings != nil {
+		return fmt.Errorf("path resolver already started")
+	}
+
+	numCPU, err := utils.NumCPU()
+	if err != nil {
+		return err
+	}
+	pr.numCPU = uint64(numCPU)
+
+	pathRingsMap, err := managerhelper.Map(m, "pr_ringbufs")
+	if err != nil {
+		return err
+	}
+
+	pathRings, err := syscall.Mmap(pathRingsMap.FD(), 0, int(pr.numCPU*RingBufferSize), unix.PROT_READ, unix.MAP_SHARED)
+	if err != nil || pathRings == nil {
+		return fmt.Errorf("failed to mmap pr_ringbufs map: %w", err)
+	}
+
+	pr.pathRings = pathRings
+
+	return nil
+}
+
+func (pr *pathResolver) close() error {
+	return unix.Munmap(pr.pathRings)
+}
+
+func (pr *pathResolver) resolvePath(ref *model.PathRingBufferRef) (string, error) {
+	if ref.Length == 0 {
+		return "", fmt.Errorf("0 length path ref")
+	}
+
+	if ref.Length > RingBufferSize {
+		return "", fmt.Errorf("path ref too big: %d bytes", ref.Length)
+	}
+
+	if ref.ReadCursor > RingBufferSize {
+		return "", fmt.Errorf("path ref has invalid read cursor: %d", ref.ReadCursor)
+	}
+
+	if ref.CPU >= uint32(pr.numCPU) {
+		return "", fmt.Errorf("path ref has invalid CPU number: %d", ref.CPU)
+	}
+
+	var path string
+	ringBufferOffset := uint64(uint64(ref.CPU) * RingBufferSize)
+	if ref.ReadCursor+ref.Length > RingBufferSize {
+		firstPart := model.NullTerminatedString(pr.pathRings[ringBufferOffset+ref.ReadCursor : ringBufferOffset+RingBufferSize])
+		remaining := ref.Length - (RingBufferSize - ref.ReadCursor)
+		secondPart := model.NullTerminatedString(pr.pathRings[ringBufferOffset : ringBufferOffset+remaining])
+		path = firstPart + secondPart
+	} else {
+		path = model.NullTerminatedString(pr.pathRings[ringBufferOffset+ref.ReadCursor : ringBufferOffset+ref.ReadCursor+ref.Length])
+	}
+
+	pr.fnv1a.Reset()
+	pr.fnv1a.Write([]byte(path))
+	hash := pr.fnv1a.Sum64()
+
+	if ref.Hash != hash {
+		return "", fmt.Errorf("path ref hash mismatch (expected %d, got %d)", ref.Hash, hash)
+	}
+
+	pathParts := strings.Split(path, "/")
+	for i, j := 0, len(pathParts)-1; i < j; i, j = i+1, j-1 { // TODO: extract this utils package
+		pathParts[i], pathParts[j] = pathParts[j], pathParts[i]
+	}
+
+	return strings.Join(pathParts, "/"), nil
+}
+
 // Resolver describes a resolvers for path and file names
 type Resolver struct {
 	dentryResolver *dentry.Resolver
 	mountResolver  *mount.Resolver
+	pathResolver   *pathResolver
 }
 
 // NewResolver returns a new path resolver
 func NewResolver(dentryResolver *dentry.Resolver, mountResolver *mount.Resolver) *Resolver {
-	return &Resolver{dentryResolver: dentryResolver, mountResolver: mountResolver}
+	return &Resolver{dentryResolver: dentryResolver, mountResolver: mountResolver, pathResolver: newPathResolver()}
 }
 
 // ResolveBasename resolves an inode/mount ID pair to a file basename
@@ -78,9 +184,21 @@ func (r *Resolver) ResolveBasename(e *model.FileFields) string {
 
 // ResolveFileFieldsPath resolves an inode/mount ID pair to a full path
 func (r *Resolver) ResolveFileFieldsPath(e *model.FileFields, pidCtx *model.PIDContext, ctrCtx *model.ContainerContext) (string, error) {
-	pathStr, err := r.dentryResolver.Resolve(e.MountID, e.Inode, e.PathID, !e.HasHardLinks())
-	if err != nil {
-		return pathStr, &ErrPathResolution{Err: err}
+
+	var pathStr string
+
+	if r.pathResolver != nil && e.PathRingBufferRef.Length != 0 {
+		resolvedPath, err := r.pathResolver.resolvePath(&e.PathRingBufferRef)
+		if err != nil {
+			return resolvedPath, &ErrPathResolution{Err: err}
+		}
+		pathStr = resolvedPath
+	} else {
+		resolvedPath, err := r.dentryResolver.Resolve(e.MountID, e.Inode, e.PathID, !e.HasHardLinks())
+		if err != nil {
+			return resolvedPath, &ErrPathResolution{Err: err}
+		}
+		pathStr = resolvedPath
 	}
 
 	if e.IsFileless() {
@@ -152,4 +270,18 @@ func (r *Resolver) ResolveMountPoint(ev *model.Event, e *model.Mount) (string, e
 		}
 	}
 	return e.MountPointStr, nil
+}
+
+func (r *Resolver) Start(m *manager.Manager) error {
+	if r.pathResolver != nil {
+		return r.pathResolver.start(m)
+	}
+	return nil
+}
+
+func (r *Resolver) Close() error {
+	if r.pathResolver != nil {
+		return r.pathResolver.close()
+	}
+	return nil
 }

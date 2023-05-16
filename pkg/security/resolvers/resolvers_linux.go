@@ -166,6 +166,10 @@ func (r *Resolvers) Start(ctx context.Context) error {
 		return err
 	}
 
+	if err := r.PathResolver.Start(r.manager); err != nil {
+		return err
+	}
+
 	r.CGroupResolver.Start(ctx)
 	if r.SBOMResolver != nil {
 		r.SBOMResolver.Start(ctx)
