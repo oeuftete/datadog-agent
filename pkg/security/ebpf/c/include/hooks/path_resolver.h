@@ -5,11 +5,11 @@
 #include "constants/custom.h"
 
 #define PR_MAX_SEGMENT_LENGTH 255
-#define PR_MAX_ITERATION_DEPTH 30
-#define PR_MAX_TAIL_CALL 20
+#define PR_MAX_ITERATION_DEPTH 8
+#define PR_MAX_TAIL_CALL 28
 
-#define FNV_OFFSET_BASIS    14695981039346656037u
-#define FNV_PRIME           1099511628211u
+#define FNV_OFFSET_BASIS    ((__u64)14695981039346656037U)
+#define FNV_PRIME           ((__u64)1099511628211U)
 
 struct dentry_name {
     char name[PR_MAX_SEGMENT_LENGTH + 1];
@@ -78,20 +78,20 @@ int __attribute__((always_inline)) resolve_path_tail_call(void *ctx, struct dent
 
         bpf_probe_read(&qstr, sizeof(qstr), &dentry->d_name);
         long len = bpf_probe_read_str(&dname.name, sizeof(dname.name), (void *)qstr.name);
-        if (len < 0 || len == sizeof(dname.name)) {
-            len = 0;
+        if (dname.name[0] == 0) {
+            return DENTRY_ERROR;
         }
+        len -= 1; // do not count trailing zero
 
-        // bpf_printk("dentry_name (%lu): %s\n", len, dname.name);
-
-        if (dname.name[0] == '/' || dname.name[0] == 0) {
+        if (dname.name[0] == '/') {
             // mark the path resolution as complete which will stop the tail calls
             input->key.ino = 0;
+            rb->write_cursor = write_cursor % PR_RING_BUFFER_SIZE;
             return i + 1;
         }
 
 #pragma unroll
-        for (int j = 0; j < sizeof(dname.name); j++) {
+        for (int j = 0; j < PR_MAX_SEGMENT_LENGTH; j++) {
             path_ref->hash ^= dname.name[j];
             path_ref->hash *= FNV_PRIME;
             rb->buffer[write_cursor++ % PR_RING_BUFFER_SIZE] = dname.name[j];
@@ -107,7 +107,7 @@ int __attribute__((always_inline)) resolve_path_tail_call(void *ctx, struct dent
     }
 
     if (input->iteration == PR_MAX_TAIL_CALL) {
-        path_ref->len = 0;
+        return DENTRY_ERROR;
     }
 
     // prepare for the next iteration
