@@ -24,7 +24,7 @@ BPF_ARRAY_MAP(pipefs_mountid, u32, 1)
 BPF_ARRAY_MAP(selinux_enforce_status, u16, 2)
 BPF_ARRAY_MAP(splice_entry_flags_approvers, u32, 1)
 BPF_ARRAY_MAP(splice_exit_flags_approvers, u32, 1)
-BPF_ARRAY_MAP(pr_ringbufs, struct pr_ring_buffer, 16) // TODO: edit this at runtime with the number of cores
+BPF_ARRAY_MAP(pr_ringbufs, struct pr_ring_buffer, 1) // max entries is overriden at runtime with the number of cores
 
 BPF_HASH_MAP(activity_dumps_config, u32, struct activity_dump_config, 1) // max entries will be overridden at runtime
 BPF_HASH_MAP(activity_dump_config_defaults, u32, struct activity_dump_config, 1)

@@ -369,10 +369,10 @@ func (dr *Resolver) ResolveFromCache(mountID uint32, inode uint64, pathID uint32
 		dr.hitsCounters[entry].Add(depth)
 	}
 
-	return computeFilenameFromParts(filenameParts), err
+	return ComputeFilenameFromParts(filenameParts), err
 }
 
-func computeFilenameFromParts(parts []string) string {
+func ComputeFilenameFromParts(parts []string) string {
 	if len(parts) == 0 {
 		return "/"
 	}
@@ -460,7 +460,7 @@ func (dr *Resolver) ResolveFromMap(mountID uint32, inode uint64, pathID uint32, 
 		key = pathLeaf.Parent
 	}
 
-	filename := computeFilenameFromParts(filenameParts)
+	filename := ComputeFilenameFromParts(filenameParts)
 
 	entry := counterEntry{
 		resolutionType: metrics.KernelMapsTag,
@@ -643,7 +643,7 @@ func (dr *Resolver) ResolveFromERPC(mountID uint32, inode uint64, pathID uint32,
 		dr.missCounters[entry].Inc()
 	}
 
-	return computeFilenameFromParts(filenameParts), resolutionErr
+	return ComputeFilenameFromParts(filenameParts), resolutionErr
 }
 
 // Resolve the pathname of a dentry, starting at the pathnameKey in the pathnames table

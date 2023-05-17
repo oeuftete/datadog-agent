@@ -1438,7 +1438,7 @@ func NewProbe(config *config.Config, opts Opts) (*Probe, error) {
 	}
 
 	useRingBuffers := p.UseRingBuffers()
-	useMmapableMaps := p.kernelVersion.HaveMmapableMaps()
+	haveMmapableMaps := p.kernelVersion.HaveMmapableMaps()
 
 	p.Manager = ebpf.NewRuntimeSecurityManager(useRingBuffers)
 
@@ -1454,10 +1454,11 @@ func NewProbe(config *config.Config, opts Opts) (*Probe, error) {
 	p.managerOptions.MapSpecEditors = probes.AllMapSpecEditors(numCPU, probes.MapSpecEditorOpts{
 		TracedCgroupSize:        p.Config.RuntimeSecurity.ActivityDumpTracedCgroupsCount,
 		UseRingBuffers:          useRingBuffers,
-		UseMmapableMaps:         useMmapableMaps,
+		UseMmapableMaps:         haveMmapableMaps,
 		RingBufferSize:          uint32(p.Config.Probe.EventStreamBufferSize),
 		PathResolutionEnabled:   p.Opts.PathResolutionEnabled,
 		SecurityProfileMaxCount: p.Config.RuntimeSecurity.SecurityProfileMaxCount,
+		UsePathRings:            haveMmapableMaps,
 	})
 
 	if config.RuntimeSecurity.ActivityDumpEnabled {
@@ -1603,8 +1604,8 @@ func NewProbe(config *config.Config, opts Opts) (*Probe, error) {
 	}
 
 	// tail calls
-	p.managerOptions.TailCallRouter = probes.AllTailRoutes(p.Config.Probe.ERPCDentryResolutionEnabled, p.Config.Probe.NetworkEnabled, useMmapableMaps)
-	if !p.Config.Probe.ERPCDentryResolutionEnabled || useMmapableMaps {
+	p.managerOptions.TailCallRouter = probes.AllTailRoutes(p.Config.Probe.ERPCDentryResolutionEnabled, p.Config.Probe.NetworkEnabled, haveMmapableMaps)
+	if !p.Config.Probe.ERPCDentryResolutionEnabled || haveMmapableMaps {
 		// exclude the programs that use the bpf_probe_write_user helper
 		p.managerOptions.ExcludedFunctions = probes.AllBPFProbeWriteUserProgramFunctions()
 	}

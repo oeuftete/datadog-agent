@@ -83,7 +83,7 @@ type pathResolver struct {
 	numCPU    uint64
 }
 
-const RingBufferSize = uint64(131072)
+const PathRingBuffersSize = uint64(131072)
 
 func newPathResolver() *pathResolver {
 	return &pathResolver{
@@ -107,11 +107,10 @@ func (pr *pathResolver) start(m *manager.Manager) error {
 		return err
 	}
 
-	pathRings, err := syscall.Mmap(pathRingsMap.FD(), 0, int(pr.numCPU*RingBufferSize), unix.PROT_READ, unix.MAP_SHARED)
+	pathRings, err := syscall.Mmap(pathRingsMap.FD(), 0, int(pr.numCPU*PathRingBuffersSize), unix.PROT_READ, unix.MAP_SHARED)
 	if err != nil || pathRings == nil {
 		return fmt.Errorf("failed to mmap pr_ringbufs map: %w", err)
 	}
-
 	pr.pathRings = pathRings
 
 	return nil
@@ -123,46 +122,42 @@ func (pr *pathResolver) close() error {
 
 func (pr *pathResolver) resolvePath(ref *model.PathRingBufferRef) (string, error) {
 	if ref.Length == 0 {
-		return "", fmt.Errorf("0 length path ref")
+		return "", fmt.Errorf("path ref length is 0")
 	}
 
-	if ref.Length > RingBufferSize {
-		return "", fmt.Errorf("path ref too big: %d bytes", ref.Length)
+	if ref.Length > PathRingBuffersSize {
+		return "", fmt.Errorf("path ref length exceeds ring buffer size: %d", ref.Length)
 	}
 
-	if ref.ReadCursor > RingBufferSize {
-		return "", fmt.Errorf("path ref has invalid read cursor: %d", ref.ReadCursor)
+	if ref.ReadCursor > PathRingBuffersSize {
+		return "", fmt.Errorf("path ref read cursor is out-of-bounds: %d", ref.ReadCursor)
 	}
 
 	if ref.CPU >= uint32(pr.numCPU) {
-		return "", fmt.Errorf("path ref has invalid CPU number: %d", ref.CPU)
+		return "", fmt.Errorf("path ref CPU number is invalid: %d", ref.CPU)
 	}
 
-	var path string
-	ringBufferOffset := uint64(uint64(ref.CPU) * RingBufferSize)
-	if ref.ReadCursor+ref.Length > RingBufferSize {
-		firstPart := model.NullTerminatedString(pr.pathRings[ringBufferOffset+ref.ReadCursor : ringBufferOffset+RingBufferSize])
-		remaining := ref.Length - (RingBufferSize - ref.ReadCursor)
+	var pathStr string
+	ringBufferOffset := uint64(uint64(ref.CPU) * PathRingBuffersSize)
+	if ref.ReadCursor+ref.Length > PathRingBuffersSize {
+		firstPart := model.NullTerminatedString(pr.pathRings[ringBufferOffset+ref.ReadCursor : ringBufferOffset+PathRingBuffersSize])
+		remaining := ref.Length - (PathRingBuffersSize - ref.ReadCursor)
 		secondPart := model.NullTerminatedString(pr.pathRings[ringBufferOffset : ringBufferOffset+remaining])
-		path = firstPart + secondPart
+		pathStr = firstPart + secondPart
 	} else {
-		path = model.NullTerminatedString(pr.pathRings[ringBufferOffset+ref.ReadCursor : ringBufferOffset+ref.ReadCursor+ref.Length])
+		pathStr = model.NullTerminatedString(pr.pathRings[ringBufferOffset+ref.ReadCursor : ringBufferOffset+ref.ReadCursor+ref.Length])
 	}
 
 	pr.fnv1a.Reset()
-	pr.fnv1a.Write([]byte(path))
+	pr.fnv1a.Write([]byte(pathStr))
 	hash := pr.fnv1a.Sum64()
-
 	if ref.Hash != hash {
 		return "", fmt.Errorf("path ref hash mismatch (expected %d, got %d)", ref.Hash, hash)
 	}
 
-	pathParts := strings.Split(path, "/")
-	for i, j := 0, len(pathParts)-1; i < j; i, j = i+1, j-1 { // TODO: extract this utils package
-		pathParts[i], pathParts[j] = pathParts[j], pathParts[i]
-	}
-
-	return strings.Join(pathParts, "/"), nil
+	pathStr = strings.TrimSuffix(pathStr, "/")
+	pathParts := strings.Split(pathStr, "/")
+	return dentry.ComputeFilenameFromParts(pathParts), nil
 }
 
 // Resolver describes a resolvers for path and file names
