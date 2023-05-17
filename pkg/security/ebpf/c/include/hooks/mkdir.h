@@ -86,7 +86,7 @@ int __attribute__((always_inline)) sys_mkdir_ret(void *ctx, int retval, int dr_t
     syscall->resolver.iteration = 0;
     syscall->resolver.ret = 0;
 
-    resolve_dentry(ctx, dr_type);
+    resolve_path(ctx, dr_type);
 
     // if the tail call fails, we need to pop the syscall cache entry
     pop_syscall(EVENT_MKDIR);

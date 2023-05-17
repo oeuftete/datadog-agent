@@ -197,7 +197,7 @@ int __attribute__((always_inline)) sys_open_ret(void *ctx, int retval, int dr_ty
     syscall->resolver.ret = 0;
 
     // tail call
-    resolve_dentry(ctx, dr_type);
+    resolve_path(ctx, dr_type);
 
     // if the tail call fails, we need to pop the syscall cache entry
     pop_syscall(EVENT_OPEN);

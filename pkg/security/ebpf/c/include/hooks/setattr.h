@@ -85,7 +85,7 @@ int kprobe_security_inode_setattr(struct pt_regs *ctx) {
     syscall->resolver.iteration = 0;
     syscall->resolver.ret = 0;
 
-    resolve_dentry(ctx, DR_KPROBE);
+    resolve_path(ctx, DR_KPROBE);
     return 0;
 }
 
