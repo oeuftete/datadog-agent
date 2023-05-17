@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"hash"
 	"hash/fnv"
+	"path"
 	"strings"
 	"syscall"
 
@@ -174,6 +175,13 @@ func NewResolver(dentryResolver *dentry.Resolver, mountResolver *mount.Resolver)
 
 // ResolveBasename resolves an inode/mount ID pair to a file basename
 func (r *Resolver) ResolveBasename(e *model.FileFields) string {
+	if r.pathResolver != nil && e.PathRingBufferRef.Length != 0 {
+		resolvedPath, err := r.pathResolver.resolvePath(&e.PathRingBufferRef)
+		if err != nil {
+			return r.dentryResolver.ResolveName(e.MountID, e.Inode, e.PathID)
+		}
+		return path.Base(resolvedPath)
+	}
 	return r.dentryResolver.ResolveName(e.MountID, e.Inode, e.PathID)
 }
 
