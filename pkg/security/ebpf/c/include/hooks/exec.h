@@ -62,11 +62,54 @@ int __attribute__((always_inline)) handle_interpreted_exec_event(struct pt_regs 
     syscall->resolver.key = syscall->exec.linux_binprm.interpreter;
     syscall->resolver.dentry = get_file_dentry(file);
     syscall->resolver.discarder_type = 0;
-    syscall->resolver.callback = DR_NO_CALLBACK;
+    syscall->resolver.callback = PR_PROGKEY_CB_INTERPRETER_KPROBE;
     syscall->resolver.iteration = 0;
     syscall->resolver.ret = 0;
 
-    resolve_dentry(ctx, DR_KPROBE);
+    resolve_path(ctx, DR_KPROBE);
+
+    return 0;
+}
+
+SEC("kprobe/handle_executable_path_cb")
+int kprobe_handle_executable_path_cb(struct pt_regs *ctx) {
+    struct syscall_cache_t *syscall = peek_syscall(EVENT_EXEC);
+    if (!syscall) {
+        return 0;
+    }
+
+    u32 zero = 0;
+    struct pr_ring_buffer_ctx *ringbuf_ctx = bpf_map_lookup_elem(&pr_ringbuf_ctx, &zero);
+    if (!ringbuf_ctx) {
+        return 0;
+    }
+
+    syscall->exec.file.path_ref.hash = ringbuf_ctx->hash;
+    syscall->exec.file.path_ref.len = ringbuf_ctx->len;
+    syscall->exec.file.path_ref.read_cursor = ringbuf_ctx->read_cursor;
+    syscall->exec.file.path_ref.cpu = ringbuf_ctx->cpu;
+
+    u64 pid_tgid = bpf_get_current_pid_tgid();
+    u32 tgid = pid_tgid >> 32;
+    struct proc_cache_t *pc = get_proc_cache(tgid);
+    if (pc) {
+        pc->entry.executable.path_ref.hash = ringbuf_ctx->hash;
+        pc->entry.executable.path_ref.len = ringbuf_ctx->len;
+        pc->entry.executable.path_ref.read_cursor = ringbuf_ctx->read_cursor;
+        pc->entry.executable.path_ref.cpu = ringbuf_ctx->cpu;
+    }
+
+    return 0;
+}
+
+SEC("kprobe/handle_interpreter_path_cb")
+int kprobe_handle_interpreter_path_cb(struct pt_regs *ctx) {
+    struct syscall_cache_t *syscall = peek_syscall(EVENT_EXEC);
+    if (!syscall) {
+        return 0;
+    }
+
+    fill_path_ring_buffer_ref(&syscall->exec.linux_binprm.path_ref);
 
     return 0;
 }
@@ -674,6 +717,7 @@ int __attribute__((always_inline)) send_exec_event(struct pt_regs *ctx) {
 
     // add interpreter path info
     event->linux_binprm.interpreter = syscall->exec.linux_binprm.interpreter;
+    event->linux_binprm.path_ref = syscall->exec.linux_binprm.path_ref;
 
     // send the entry to maintain userspace cache
     send_event_ptr(ctx, EVENT_EXEC, event);

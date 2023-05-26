@@ -22,6 +22,7 @@ struct pr_ring_buffer_ref_t {
     u64 len;
     u64 read_cursor;
     u32 cpu;
+    u32 padding;
 };
 
 #endif

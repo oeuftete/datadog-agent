@@ -3,6 +3,7 @@
 
 #include "constants/custom.h"
 #include "dentry_resolver.h"
+#include "path_resolver.h"
 
 struct kevent_t {
     u64 cpu;

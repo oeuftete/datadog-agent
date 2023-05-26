@@ -7,6 +7,7 @@
 #include "filter.h"
 #include "events_context.h"
 #include "process.h"
+#include "path_resolver.h"
 
 struct syscall_monitor_entry_t {
     char syscalls[SYSCALL_ENCODING_TABLE_SIZE];
@@ -80,13 +81,15 @@ struct syscall_cache_t {
         } setattr;
 
         struct {
-            struct mount *src_mnt;
-            struct mount *dest_mnt;
+            struct mount *newmnt;
+            struct mount *parent;
             struct mount *bind_src_mnt;
-            struct mountpoint *dest_mountpoint;
+            struct mountpoint *mp;
             struct path_key_t root_key;
-            struct path_key_t path_key;
+            struct path_key_t mp_key;
             struct path_key_t bind_src_key;
+            struct pr_ring_buffer_ref_t root_ref;
+            struct pr_ring_buffer_ref_t mp_ref;
             const char *fstype;
         } mount;
 
@@ -196,12 +199,12 @@ struct syscall_cache_t {
         } bind;
 
         struct {
-            struct mount *mnt;
+            struct mount *newmnt;
             struct mount *parent;
             struct dentry *mp_dentry;
             const char *fstype;
-            struct path_key_t root_key;
-            struct path_key_t path_key;
+            struct path_key_t mp_path_key;
+            struct pr_ring_buffer_ref_t mp_path_ref;
             unsigned long flags;
         } unshare_mntns;
     };

@@ -7,6 +7,7 @@
 #include "events_definition.h"
 #include "maps.h"
 #include "perf_ring.h"
+#include "path_resolver.h"
 
 #include "dentry_resolver.h"
 #include "discarders.h"
@@ -95,23 +96,23 @@ static __attribute__((always_inline)) void umounted(struct pt_regs *ctx, u32 mou
     send_event(ctx, EVENT_MOUNT_RELEASED, event);
 }
 
-void __attribute__((always_inline)) fill_resolver_mnt(struct pt_regs *ctx, struct syscall_cache_t *syscall) {
-    struct dentry *dentry = get_vfsmount_dentry(get_mount_vfsmount(syscall->unshare_mntns.mnt));
-    syscall->unshare_mntns.root_key.mount_id = get_mount_mount_id(syscall->unshare_mntns.mnt);
-    syscall->unshare_mntns.root_key.ino = get_dentry_ino(dentry);
+void __attribute__((always_inline)) resolve_unshared_mnt(struct pt_regs *ctx, struct syscall_cache_t *syscall) {
+    syscall->unshare_mntns.mp_path_key.mount_id = get_mount_mount_id(syscall->unshare_mntns.parent);
+    syscall->unshare_mntns.mp_path_key.ino = get_dentry_ino(syscall->unshare_mntns.mp_dentry);
 
-    struct super_block *sb = get_dentry_sb(dentry);
+    struct dentry *newmnt_dentry = get_vfsmount_dentry(get_mount_vfsmount(syscall->unshare_mntns.newmnt));
+    struct super_block *sb = get_dentry_sb(newmnt_dentry);
     struct file_system_type *s_type = get_super_block_fs(sb);
     bpf_probe_read(&syscall->unshare_mntns.fstype, sizeof(syscall->unshare_mntns.fstype), &s_type->name);
 
-    syscall->resolver.key = syscall->unshare_mntns.root_key;
-    syscall->resolver.dentry = dentry;
+    syscall->resolver.key = syscall->unshare_mntns.mp_path_key;
+    syscall->resolver.dentry = syscall->unshare_mntns.mp_dentry;
     syscall->resolver.discarder_type = 0;
-    syscall->resolver.callback = DR_UNSHARE_MNTNS_STAGE_ONE_CALLBACK_KPROBE_KEY;
+    syscall->resolver.callback = PR_PROGKEY_CB_UNSHARE_MNTNS_KPROBE;
     syscall->resolver.iteration = 0;
     syscall->resolver.ret = 0;
 
-    resolve_dentry(ctx, DR_KPROBE);
+    resolve_path(ctx, DR_KPROBE);
 }
 
 int __attribute__((always_inline)) get_pipefs_mount_id(void) {

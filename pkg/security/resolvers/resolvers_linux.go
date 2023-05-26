@@ -40,8 +40,9 @@ import (
 
 // ResolversOpts defines common options
 type ResolversOpts struct {
-	PathResolutionEnabled bool
-	TagsResolver          tags.Resolver
+	PathResolutionEnabled  bool
+	TagsResolver           tags.Resolver
+	UsePathRingsResolution bool
 }
 
 // Resolvers holds the list of the event attribute resolvers
@@ -116,7 +117,9 @@ func NewResolvers(config *config.Config, manager *manager.Manager, statsdClient 
 	}
 
 	var pathResolver path.ResolverInterface
-	if opts.PathResolutionEnabled {
+	if opts.PathResolutionEnabled && opts.UsePathRingsResolution {
+		pathResolver = path.NewPathRingsResolver(mountResolver)
+	} else if opts.PathResolutionEnabled {
 		pathResolver = path.NewResolver(dentryResolver, mountResolver)
 	} else {
 		pathResolver = &path.NoResolver{}

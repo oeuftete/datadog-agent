@@ -117,7 +117,7 @@ int __attribute__((always_inline)) resolve_path_tail_call(void *ctx, struct dent
     return PR_MAX_ITERATION_DEPTH;
 }
 
-#define path_resolver_loop(ctx, pr_progs_map, callbacks_map)                                                           \
+#define path_resolver_loop(ctx, pr_progs_map)                                                                          \
     struct syscall_cache_t *syscall = peek_syscall(EVENT_ANY);                                                         \
     if (!syscall)                                                                                                      \
         return 0;                                                                                                      \
@@ -134,7 +134,7 @@ int __attribute__((always_inline)) resolve_path_tail_call(void *ctx, struct dent
     }                                                                                                                  \
                                                                                                                        \
     if (syscall->resolver.callback >= 0) {                                                                             \
-        bpf_tail_call_compat(ctx, callbacks_map, syscall->resolver.callback);                                          \
+        bpf_tail_call_compat(ctx, pr_progs_map, syscall->resolver.callback);                                           \
     }                                                                                                                  \
 
 SEC("kprobe/path_resolver_entrypoint")
@@ -193,13 +193,13 @@ int tracepoint_path_resolver_entrypoint(void *ctx) {
 
 SEC("kprobe/path_resolver_loop")
 int kprobe_path_resolver_loop(struct pt_regs *ctx) {
-    path_resolver_loop(ctx, &path_resolver_kprobe_progs, &dentry_resolver_kprobe_callbacks);
+    path_resolver_loop(ctx, &path_resolver_kprobe_progs);
     return 0;
 }
 
 SEC("tracepoint/path_resolver_loop")
 int tracepoint_path_resolver_loop(void *ctx) {
-    path_resolver_loop(ctx, &path_resolver_tracepoint_progs, &dentry_resolver_tracepoint_callbacks);
+    path_resolver_loop(ctx, &path_resolver_tracepoint_progs);
     return 0;
 }
 

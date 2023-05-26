@@ -224,7 +224,7 @@ func (e *Process) UnmarshalPidCacheBinary(data []byte) (int, error) {
 
 // UnmarshalBinary unmarshalls a binary representation of itself
 func (e *Process) UnmarshalBinary(data []byte) (int, error) {
-	const size = 288 // size of struct exec_event_t starting from process_entry_t, inclusive
+	const size = 320 // size of struct exec_event_t starting from process_entry_t, inclusive
 	if len(data) < size {
 		return 0, ErrNotEnoughData
 	}
@@ -244,8 +244,15 @@ func (e *Process) UnmarshalBinary(data []byte) (int, error) {
 
 	// interpreter part
 	var pathKey PathKey
+	var pathRef PathRingBufferRef
 
 	n, err = pathKey.UnmarshalBinary(data[read:])
+	if err != nil {
+		return 0, err
+	}
+	read += n
+
+	n, err = pathRef.UnmarshalBinary(data[read:])
 	if err != nil {
 		return 0, err
 	}
@@ -254,6 +261,7 @@ func (e *Process) UnmarshalBinary(data []byte) (int, error) {
 	// TODO: Is there a better way to determine if there's no interpreter?
 	if e.FileEvent.Inode != pathKey.Inode || e.FileEvent.MountID != pathKey.MountID {
 		e.LinuxBinprm.FileEvent.PathKey = pathKey
+		e.LinuxBinprm.FileEvent.PathRef = pathRef
 	}
 
 	if len(data[read:]) < 16 {
@@ -344,7 +352,8 @@ func (pr *PathRingBufferRef) UnmarshalBinary(data []byte) (int, error) {
 	pr.ReadCursor = ByteOrder.Uint64(data[16:24])
 	pr.CPU = ByteOrder.Uint32(data[24:28])
 
-	return 28, nil
+	// +4 for padding
+	return 28 + 4, nil
 }
 
 // UnmarshalBinary unmarshalls a binary representation of itself
@@ -380,7 +389,7 @@ func (e *FileFields) UnmarshalBinary(data []byte) (int, error) {
 
 	data = data[56:]
 
-	n, err = e.PathRingBufferRef.UnmarshalBinary(data)
+	n, err = e.PathRef.UnmarshalBinary(data)
 	if err != nil {
 		return n, err
 	}
@@ -416,27 +425,49 @@ func (e *MkdirEvent) UnmarshalBinary(data []byte) (int, error) {
 
 // UnmarshalBinary unmarshalls a binary representation of itself
 func (m *Mount) UnmarshalBinary(data []byte) (int, error) {
-	if len(data) < 56 {
+	const size = 120
+	if len(data) < size {
 		return 0, ErrNotEnoughData
 	}
-
-	m.ParentInode = ByteOrder.Uint64(data[0:8])
-	m.RootInode = ByteOrder.Uint64(data[8:16])
-	m.Device = ByteOrder.Uint32(data[16:20])
-	m.MountID = ByteOrder.Uint32(data[20:24])
-	m.ParentMountID = ByteOrder.Uint32(data[24:28])
-	m.RootMountID = ByteOrder.Uint32(data[28:32])
-	m.BindSrcMountID = ByteOrder.Uint32(data[32:36])
-
-	// +4 for padding
-
+	var read int
 	var err error
-	m.FSType, err = UnmarshalString(data[40:56], 16)
+
+	n, err := m.MountPointPathRef.UnmarshalBinary(data[read:])
 	if err != nil {
 		return 0, err
 	}
+	read += n
 
-	return 56, nil
+	n, err = m.RootStrPathRef.UnmarshalBinary(data[read:])
+	if err != nil {
+		return 0, err
+	}
+	read += n
+
+	m.ParentInode = ByteOrder.Uint64(data[read : read+8])
+	read += 8
+	m.RootInode = ByteOrder.Uint64(data[read : read+8])
+	read += 8
+	m.Device = ByteOrder.Uint32(data[read : read+4])
+	read += 4
+	m.MountID = ByteOrder.Uint32(data[read : read+4])
+	read += 4
+	m.ParentMountID = ByteOrder.Uint32(data[read : read+4])
+	read += 4
+	m.RootMountID = ByteOrder.Uint32(data[read : read+4])
+	read += 4
+	m.BindSrcMountID = ByteOrder.Uint32(data[read : read+4])
+	read += 4
+
+	read += 4 // padding
+
+	m.FSType, err = UnmarshalString(data[read:read+16], 16)
+	if err != nil {
+		return 0, err
+	}
+	read += 16
+
+	return validateReadSize(size, read)
 }
 
 // UnmarshalBinary unmarshalls a binary representation of itself

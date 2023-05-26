@@ -3,6 +3,7 @@
 
 #include "constants/custom.h"
 #include "events_context.h"
+#include "path_resolver.h"
 
 struct mount_released_event_t {
     struct kevent_t event;
@@ -15,6 +16,8 @@ struct mount_ref_t {
 };
 
 struct mount_fields_t {
+    struct pr_ring_buffer_ref_t mp_ref;
+    struct pr_ring_buffer_ref_t root_ref;
     unsigned long parent_inode;
     unsigned long root_inode;
     dev_t device;

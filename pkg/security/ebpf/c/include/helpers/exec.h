@@ -24,11 +24,11 @@ int __attribute__((always_inline)) handle_exec_event(struct pt_regs *ctx, struct
     syscall->resolver.key = syscall->exec.file.path_key;
     syscall->resolver.dentry = syscall->exec.dentry;
     syscall->resolver.discarder_type = 0;
-    syscall->resolver.callback = DR_NO_CALLBACK;
+    syscall->resolver.callback = PR_PROGKEY_CB_EXECUTABLE_KPROBE;
     syscall->resolver.iteration = 0;
     syscall->resolver.ret = 0;
 
-    resolve_dentry(ctx, DR_KPROBE);
+    resolve_path(ctx, DR_KPROBE);
 
     return 0;
 }

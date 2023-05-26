@@ -1619,8 +1619,9 @@ func NewProbe(config *config.Config, opts Opts) (*Probe, error) {
 	p.scrubber.AddCustomSensitiveWords(config.Probe.CustomSensitiveWords)
 
 	resolversOpts := resolvers.ResolversOpts{
-		PathResolutionEnabled: opts.PathResolutionEnabled,
-		TagsResolver:          opts.TagsResolver,
+		PathResolutionEnabled:  opts.PathResolutionEnabled,
+		TagsResolver:           opts.TagsResolver,
+		UsePathRingsResolution: true,
 	}
 	p.resolvers, err = resolvers.NewResolvers(config, p.Manager, p.StatsdClient, p.scrubber, p.Erpc, resolversOpts)
 	if err != nil {
