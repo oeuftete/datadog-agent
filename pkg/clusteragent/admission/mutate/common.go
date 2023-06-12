@@ -11,6 +11,8 @@ import (
 	"encoding/json"
 	"fmt"
 
+	authenticationv1 "k8s.io/api/authentication/v1"
+
 	"github.com/DataDog/datadog-agent/pkg/util/log"
 
 	"github.com/wI2L/jsondiff"
@@ -19,6 +21,7 @@ import (
 )
 
 type mutateFunc func(*corev1.Pod, string, dynamic.Interface) error
+type mutatePodExecFunc func(*corev1.PodExecOptions, string, *authenticationv1.UserInfo, dynamic.Interface) error
 
 // mutate handles mutating pods and encoding and decoding admission
 // requests and responses for the public mutate functions
@@ -38,6 +41,31 @@ func mutate(rawPod []byte, ns string, m mutateFunc, dc dynamic.Interface) ([]byt
 	}
 
 	patch, err := jsondiff.CompareJSON(rawPod, bytes) // TODO: Try to generate the patch at the mutateFunc
+	if err != nil {
+		return nil, fmt.Errorf("failed to prepare the JSON patch: %v", err)
+	}
+
+	return json.Marshal(patch)
+}
+
+// mutatePodExecOptions handles mutating PodExecOptions and encoding and decoding admission
+// requests and responses for the public mutate functions
+func mutatePodExecOptions(rawPodExecOptions []byte, ns string, userInfo *authenticationv1.UserInfo, m mutatePodExecFunc, dc dynamic.Interface) ([]byte, error) {
+	var exec corev1.PodExecOptions
+	if err := json.Unmarshal(rawPodExecOptions, &exec); err != nil {
+		return nil, fmt.Errorf("failed to decode raw object: %v", err)
+	}
+
+	if err := m(&exec, ns, userInfo, dc); err != nil {
+		return nil, err
+	}
+
+	bytes, err := json.Marshal(exec)
+	if err != nil {
+		return nil, fmt.Errorf("failed to encode the mutated Pod object: %v", err)
+	}
+
+	patch, err := jsondiff.CompareJSON(rawPodExecOptions, bytes) // TODO: Try to generate the patch at the mutateFunc
 	if err != nil {
 		return nil, fmt.Errorf("failed to prepare the JSON patch: %v", err)
 	}

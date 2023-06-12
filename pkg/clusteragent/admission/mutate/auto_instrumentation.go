@@ -14,6 +14,8 @@ import (
 	"strconv"
 	"strings"
 
+	authenticationv1 "k8s.io/api/authentication/v1"
+
 	"github.com/DataDog/datadog-agent/pkg/clusteragent/admission/common"
 	"github.com/DataDog/datadog-agent/pkg/clusteragent/admission/metrics"
 	"github.com/DataDog/datadog-agent/pkg/config"
@@ -88,7 +90,7 @@ var (
 )
 
 // InjectAutoInstrumentation injects APM libraries into pods
-func InjectAutoInstrumentation(rawPod []byte, ns string, dc dynamic.Interface) ([]byte, error) {
+func InjectAutoInstrumentation(rawPod []byte, ns string, _ *authenticationv1.UserInfo, dc dynamic.Interface) ([]byte, error) {
 	return mutate(rawPod, ns, injectAutoInstrumentation, dc)
 }
 

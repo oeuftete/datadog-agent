@@ -15,6 +15,8 @@ import (
 	"strings"
 	"time"
 
+	authenticationv1 "k8s.io/api/authentication/v1"
+
 	"github.com/DataDog/datadog-agent/pkg/clusteragent/admission/common"
 	"github.com/DataDog/datadog-agent/pkg/clusteragent/admission/metrics"
 	"github.com/DataDog/datadog-agent/pkg/config"
@@ -50,7 +52,7 @@ func (o *ownerInfo) buildID(ns string) string {
 
 // InjectTags adds the DD_ENV, DD_VERSION, DD_SERVICE env vars to
 // the pod template from pod and higher-level resource labels
-func InjectTags(rawPod []byte, ns string, dc dynamic.Interface) ([]byte, error) {
+func InjectTags(rawPod []byte, ns string, _ *authenticationv1.UserInfo, dc dynamic.Interface) ([]byte, error) {
 	return mutate(rawPod, ns, injectTags, dc)
 }
 

@@ -16,6 +16,8 @@ import (
 	"net/http"
 	"time"
 
+	authenticationv1 "k8s.io/api/authentication/v1"
+
 	"github.com/DataDog/datadog-agent/pkg/clusteragent/admission/metrics"
 	"github.com/DataDog/datadog-agent/pkg/config"
 	"github.com/DataDog/datadog-agent/pkg/util/kubernetes/apiserver/common"
@@ -33,7 +35,7 @@ import (
 
 const jsonContentType = "application/json"
 
-type admissionFunc func([]byte, string, dynamic.Interface) ([]byte, error)
+type admissionFunc func([]byte, string, *authenticationv1.UserInfo, dynamic.Interface) ([]byte, error)
 
 // Server TODO <container-integrations>
 type Server struct {
@@ -156,7 +158,7 @@ func (s *Server) mutateHandler(w http.ResponseWriter, r *http.Request, mutateFun
 		}
 		admissionReviewResp := &admiv1.AdmissionReview{}
 		admissionReviewResp.SetGroupVersionKind(*gvk)
-		jsonPatch, err := mutateFunc(admissionReviewReq.Request.Object.Raw, admissionReviewReq.Request.Namespace, dc)
+		jsonPatch, err := mutateFunc(admissionReviewReq.Request.Object.Raw, admissionReviewReq.Request.Namespace, &admissionReviewReq.Request.UserInfo, dc)
 		admissionReviewResp.Response = mutationResponse(jsonPatch, err)
 		admissionReviewResp.Response.UID = admissionReviewReq.Request.UID
 		response = admissionReviewResp
@@ -167,7 +169,7 @@ func (s *Server) mutateHandler(w http.ResponseWriter, r *http.Request, mutateFun
 		}
 		admissionReviewResp := &admiv1beta1.AdmissionReview{}
 		admissionReviewResp.SetGroupVersionKind(*gvk)
-		jsonPatch, err := mutateFunc(admissionReviewReq.Request.Object.Raw, admissionReviewReq.Request.Namespace, dc)
+		jsonPatch, err := mutateFunc(admissionReviewReq.Request.Object.Raw, admissionReviewReq.Request.Namespace, &admissionReviewReq.Request.UserInfo, dc)
 		admissionReviewResp.Response = responseV1ToV1beta1(mutationResponse(jsonPatch, err))
 		admissionReviewResp.Response.UID = admissionReviewReq.Request.UID
 		response = admissionReviewResp

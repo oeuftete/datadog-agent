@@ -1053,6 +1053,10 @@ func InitConfig(config Config) {
 	config.BindEnv("admission_controller.auto_instrumentation.init_resources.cpu")
 	config.BindEnv("admission_controller.auto_instrumentation.init_resources.memory")
 	config.BindEnvAndSetDefault("admission_controller.auto_instrumentation.inject_all.namespaces", []string{})
+	config.BindEnvAndSetDefault("admission_controller.cws_instrumentation.enabled", true)
+	config.BindEnvAndSetDefault("admission_controller.cws_instrumentation.endpoint", "/injectcws")
+	config.BindEnvAndSetDefault("admission_controller.cws_instrumentation.target.namespaces", []string{})
+	config.BindEnvAndSetDefault("admission_controller.cws_instrumentation.target.all_namespaces", true)
 
 	// Telemetry
 	// Enable telemetry metrics on the internals of the Agent.

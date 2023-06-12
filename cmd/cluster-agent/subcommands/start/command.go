@@ -330,6 +330,7 @@ func start(log log.Component, config config.Component, forwarder defaultforwarde
 			server.Register(pkgconfig.Datadog.GetString("admission_controller.inject_config.endpoint"), mutate.InjectConfig, apiCl.DynamicCl)
 			server.Register(pkgconfig.Datadog.GetString("admission_controller.inject_tags.endpoint"), mutate.InjectTags, apiCl.DynamicCl)
 			server.Register(pkgconfig.Datadog.GetString("admission_controller.auto_instrumentation.endpoint"), mutate.InjectAutoInstrumentation, apiCl.DynamicCl)
+			server.Register(pkgconfig.Datadog.GetString("admission_controller.cws_instrumentation.endpoint"), mutate.InjectCWSInstrumentation, apiCl.DynamicCl)
 
 			// Start the k8s admission webhook server
 			wg.Add(1)
