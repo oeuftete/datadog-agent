@@ -643,3 +643,5 @@ replace github.com/moby/buildkit v0.11.0 => github.com/moby/buildkit v0.11.4
 
 // Fixes a panic in trivy, see gitlab.com/cznic/libc/-/issues/25
 replace modernc.org/sqlite v1.17.3 => modernc.org/sqlite v1.19.3
+
+replace github.com/DataDog/ebpf-manager v0.2.8-0.20230607183918-2e1ebd69e14b => github.com/YoannGh/ebpf-manager v0.0.0-20230626094521-02df842a44db

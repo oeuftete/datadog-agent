@@ -137,8 +137,6 @@ github.com/DataDog/datadog-go/v5 v5.1.1 h1:JLZ6s2K1pG2h9GkvEvMdEGqMDyVLEAccdX5Tl
 github.com/DataDog/datadog-go/v5 v5.1.1/go.mod h1:KhiYb2Badlv9/rofz+OznKoEF5XKTonWyhx5K83AP8E=
 github.com/DataDog/datadog-operator v1.0.3 h1:zBGNnmFsU99wttrt0PWXXRgJvTRGeWt3YD7wUh7VBd4=
 github.com/DataDog/datadog-operator v1.0.3/go.mod h1:CXTLg7VFcpaMvjbwkKTxKUIzxRumfSe01/CWOINo4c0=
-github.com/DataDog/ebpf-manager v0.2.8-0.20230607183918-2e1ebd69e14b h1:wCa06pH6Xcz6fx8NZ3MSJ0K9jFw/TcUvZVrKpiQR1TY=
-github.com/DataDog/ebpf-manager v0.2.8-0.20230607183918-2e1ebd69e14b/go.mod h1:3KDkm7Aet4qleS9eyF+T2SVMJeJ2GToUd7EsL2aYgz0=
 github.com/DataDog/extendeddaemonset v0.9.0-rc.2 h1:uTE/QEU0oYtHnebKSMbxap7XMG5603WQxNP/UX63E7k=
 github.com/DataDog/extendeddaemonset v0.9.0-rc.2/go.mod h1:JgKVGTsjdTdtJjNyxRZjcs81/rng6LJ3XX/0D7Y12Gc=
 github.com/DataDog/glog v1.1.2-0.20230527101146-81a67cdbc7a1 h1:YpYdpEG3ohpETQTzz9u4bTvvJUzkRFwMyLrx/jtbU5g=
@@ -239,6 +237,8 @@ github.com/Shopify/logrus-bugsnag v0.0.0-20171204204709-577dee27f20d/go.mod h1:H
 github.com/StackExchange/wmi v0.0.0-20181212234831-e0a55b97c705/go.mod h1:3eOhrUMpNV+6aFIbp5/iudMxNCF27Vw2OZgy4xEx0Fg=
 github.com/StackExchange/wmi v1.2.1 h1:VIkavFPXSjcnS+O8yTq7NI32k0R5Aj+v39y29VYDOSA=
 github.com/StackExchange/wmi v1.2.1/go.mod h1:rcmrprowKIVzvc+NUiLncP2uuArMWLCbu9SBzvHz7e8=
+github.com/YoannGh/ebpf-manager v0.0.0-20230626094521-02df842a44db h1:TFIgqiPYGax32i3OZzEGE/0lmrSl6eGfTPlDVIaiJoI=
+github.com/YoannGh/ebpf-manager v0.0.0-20230626094521-02df842a44db/go.mod h1:3KDkm7Aet4qleS9eyF+T2SVMJeJ2GToUd7EsL2aYgz0=
 github.com/acobaugh/osrelease v0.1.0 h1:Yb59HQDGGNhCj4suHaFQQfBps5wyoKLSSX/J/+UifRE=
 github.com/acobaugh/osrelease v0.1.0/go.mod h1:4bFEs0MtgHNHBrmHCt67gNisnabCRAlzdVasCEGHTWY=
 github.com/acomagu/bufpipe v1.0.3 h1:fxAGrHZTgQ9w5QqVItgzwj235/uYZYgbXitB+dLupOk=
