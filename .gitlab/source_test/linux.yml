@@ -15,9 +15,9 @@
   stage: source_test
   variables:
     FLAVORS: '--flavors base'
-    KUBERNETES_CPU_REQUEST: 8
-    KUBERNETES_MEMORY_REQUEST: 16Gi
-    KUBERNETES_MEMORY_LIMIT: 16Gi
+    KUBERNETES_CPU_REQUEST: 16
+    KUBERNETES_MEMORY_REQUEST: 8Gi
+    KUBERNETES_MEMORY_LIMIT: 8Gi
   script:
     - !reference [.retrieve_linux_go_tools_deps]
     - inv -e install-tools
@@ -34,9 +34,9 @@
   stage: source_test
   variables:
     FLAVORS: '--flavors base'
-    KUBERNETES_CPU_REQUEST: 8
-    KUBERNETES_MEMORY_REQUEST: 16Gi
-    KUBERNETES_MEMORY_LIMIT: 16Gi
+    KUBERNETES_CPU_REQUEST: 16
+    KUBERNETES_MEMORY_REQUEST: 8Gi
+    KUBERNETES_MEMORY_LIMIT: 8Gi
   script:
     - !reference [.retrieve_linux_go_deps]
     - !reference [.retrieve_linux_go_tools_deps]
