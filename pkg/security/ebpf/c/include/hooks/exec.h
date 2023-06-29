@@ -89,16 +89,6 @@ int kprobe_handle_executable_path_cb(struct pt_regs *ctx) {
     syscall->exec.file.path_ref.read_cursor = ringbuf_ctx->read_cursor;
     syscall->exec.file.path_ref.cpu = ringbuf_ctx->cpu;
 
-    u64 pid_tgid = bpf_get_current_pid_tgid();
-    u32 tgid = pid_tgid >> 32;
-    struct proc_cache_t *pc = get_proc_cache(tgid);
-    if (pc) {
-        pc->entry.executable.path_ref.hash = ringbuf_ctx->hash;
-        pc->entry.executable.path_ref.len = ringbuf_ctx->len;
-        pc->entry.executable.path_ref.read_cursor = ringbuf_ctx->read_cursor;
-        pc->entry.executable.path_ref.cpu = ringbuf_ctx->cpu;
-    }
-
     return 0;
 }
 
@@ -651,7 +641,13 @@ int __attribute__((always_inline)) send_exec_event(struct pt_regs *ctx) {
                     .mount_id = syscall->exec.file.path_key.mount_id,
                     .path_id = syscall->exec.file.path_key.path_id,
                 },
-                .flags = syscall->exec.file.flags
+                .flags = syscall->exec.file.flags,
+                .path_ref = {
+                    .hash = syscall->exec.file.path_ref.hash,
+                    .len = syscall->exec.file.path_ref.len,
+                    .read_cursor = syscall->exec.file.path_ref.read_cursor,
+                    .cpu = syscall->exec.file.path_ref.cpu,
+                },
             },
             .exec_timestamp = bpf_ktime_get_ns(),
         },
