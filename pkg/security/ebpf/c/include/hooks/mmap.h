@@ -89,6 +89,7 @@ int kretprobe_fget(struct pt_regs *ctx) {
     syscall->resolver.key = syscall->mmap.file.path_key;
     syscall->resolver.dentry = syscall->mmap.dentry;
     syscall->resolver.discarder_type = syscall->policy.mode != NO_FILTER ? EVENT_MMAP : 0;
+    syscall->resolver.callback = DR_NO_CALLBACK;
     syscall->resolver.iteration = 0;
     syscall->resolver.ret = 0;
 

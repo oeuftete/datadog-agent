@@ -233,6 +233,10 @@ func (pr *PathRingsResolver) resolvePath(ref *model.PathRingBufferRef) (string, 
 		return "", fmt.Errorf("path ref hash mismatch (expected %d, got %d)", ref.Hash, hash)
 	}
 
+	if pathStr == "/" {
+		return pathStr, nil
+	}
+
 	pathStr = strings.TrimSuffix(pathStr, "/")
 	pathParts := strings.Split(pathStr, "/")
 	return dentry.ComputeFilenameFromParts(pathParts), nil

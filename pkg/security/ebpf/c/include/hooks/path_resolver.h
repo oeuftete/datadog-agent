@@ -84,6 +84,12 @@ int __attribute__((always_inline)) resolve_path_tail_call(void *ctx, struct dent
         len -= 1; // do not process trailing zero
 
         if (dname.name[0] == '/') {
+            if (ringbuf_ctx->len == 0) {
+                ringbuf_ctx->hash ^= dname.name[0];
+                ringbuf_ctx->hash *= FNV_PRIME;
+                rb->buffer[write_cursor++ % PR_RING_BUFFER_SIZE] = dname.name[0];
+                ringbuf_ctx->len += 1;
+            }
             // mark the path resolution as complete which will stop the tail calls
             input->key.ino = 0;
             ringbuf_ctx->write_cursor = write_cursor % PR_RING_BUFFER_SIZE;
