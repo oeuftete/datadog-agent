@@ -71,16 +71,14 @@
 #define PR_PROGKEY_CB_EXECUTABLE_KPROBE     7
 #define PR_PROGKEY_CB_INTERPRETER_KPROBE    8
 #define PR_PROGKEY_CB_LINK_SRC_KPROBE       9
-#define PR_PROGKEY_CB_MMAP                  10
-#define PR_PROGKEY_CB_MODULE                11
-#define PR_PROGKEY_CB_RENAME_SRC            12
-#define PR_PROGKEY_CB_RMDIR                 13
-#define PR_PROGKEY_CB_SELINUX               14
-#define PR_PROGKEY_CB_SETATTR               15
-#define PR_PROGKEY_CB_SETXATTR              16
-#define PR_PROGKEY_CB_SPLICE                17
-#define PR_PROGKEY_CB_UNLINK                18
-#define PR_PROGKEY_CB_UNSHARE_MNTNS_KPROBE  19
+#define PR_PROGKEY_CB_RENAME_SRC            10
+#define PR_PROGKEY_CB_RMDIR                 11
+#define PR_PROGKEY_CB_SELINUX               12
+#define PR_PROGKEY_CB_SETATTR               13
+#define PR_PROGKEY_CB_SETXATTR              14
+#define PR_PROGKEY_CB_SPLICE                15
+#define PR_PROGKEY_CB_UNLINK                16
+#define PR_PROGKEY_CB_UNSHARE_MNTNS_KPROBE  17
 
 #define DNS_MAX_LENGTH 256
 #define DNS_EVENT_KEY 0

@@ -89,7 +89,7 @@ BPF_PROG_ARRAY(dentry_resolver_kprobe_progs, 5)
 BPF_PROG_ARRAY(dentry_resolver_tracepoint_progs, 2)
 BPF_PROG_ARRAY(classifier_router, 100)
 BPF_PROG_ARRAY(sys_exit_progs, 64)
-BPF_PROG_ARRAY(path_resolver_kprobe_progs, 20)
+BPF_PROG_ARRAY(path_resolver_kprobe_progs, 18)
 BPF_PROG_ARRAY(path_resolver_tracepoint_progs, 7)
 
 #endif

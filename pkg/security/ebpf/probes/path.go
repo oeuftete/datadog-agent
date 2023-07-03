@@ -132,42 +132,42 @@ func getPathResolverTailCallRoutes() []manager.TailCallRoute {
 				EBPFFuncName: "tracepoint_dr_rename_callback",
 			},
 		},
-		// // exec - executable callback
-		// //  - kprobe only
-		// {
-		// 	ProgArrayName: "path_resolver_kprobe_progs",
-		// 	Key:           7,
-		// 	ProbeIdentificationPair: manager.ProbeIdentificationPair{
-		// 		EBPFFuncName: "kprobe_handle_executable_path_cb",
-		// 	},
-		// },
-		// // exec - interpreter callback
-		// //  - kprobe only
-		// {
-		// 	ProgArrayName: "path_resolver_kprobe_progs",
-		// 	Key:           8,
-		// 	ProbeIdentificationPair: manager.ProbeIdentificationPair{
-		// 		EBPFFuncName: "kprobe_handle_interpreter_path_cb",
-		// 	},
-		// },
-		// // link src callback
-		// //  - kprobe only
-		// {
-		// 	ProgArrayName: "path_resolver_kprobe_progs",
-		// 	Key:           9,
-		// 	ProbeIdentificationPair: manager.ProbeIdentificationPair{
-		// 		EBPFFuncName: "kprobe_dr_link_src_callback",
-		// 	},
-		// },
-		// // mmap
-		// //  - kprobe only
-		// {
-		// 	ProgArrayName: "path_resolver_kprobe_progs",
-		// 	Key:           10,
-		// 	ProbeIdentificationPair: manager.ProbeIdentificationPair{
-		// 		EBPFFuncName: "kprobe_dr_link_src_callback",
-		// 	},
-		// },
+		// exec - executable callback
+		//  - kprobe only
+		{
+			ProgArrayName: "path_resolver_kprobe_progs",
+			Key:           7,
+			ProbeIdentificationPair: manager.ProbeIdentificationPair{
+				EBPFFuncName: "kprobe_handle_executable_path_cb",
+			},
+		},
+		// exec - interpreter callback
+		//  - kprobe only
+		{
+			ProgArrayName: "path_resolver_kprobe_progs",
+			Key:           8,
+			ProbeIdentificationPair: manager.ProbeIdentificationPair{
+				EBPFFuncName: "kprobe_handle_interpreter_path_cb",
+			},
+		},
+		// link src callback
+		//  - kprobe only
+		{
+			ProgArrayName: "path_resolver_kprobe_progs",
+			Key:           9,
+			ProbeIdentificationPair: manager.ProbeIdentificationPair{
+				EBPFFuncName: "kprobe_dr_link_src_callback",
+			},
+		},
+		// rename src callback
+		//  - kprobe only
+		{
+			ProgArrayName: "path_resolver_kprobe_progs",
+			Key:           10,
+			ProbeIdentificationPair: manager.ProbeIdentificationPair{
+				EBPFFuncName: "kprobe_dr_rename_src_callback",
+			},
+		},
 	}
 
 	return routes

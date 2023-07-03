@@ -101,11 +101,11 @@ int kprobe_vfs_rename(struct pt_regs *ctx) {
     syscall->resolver.dentry = syscall->rename.src_dentry;
     syscall->resolver.key = syscall->rename.src_file.path_key;
     syscall->resolver.discarder_type = 0;
-    syscall->resolver.callback = DR_NO_CALLBACK;
+    syscall->resolver.callback = PR_PROGKEY_CB_RENAME_SRC;
     syscall->resolver.iteration = 0;
     syscall->resolver.ret = 0;
 
-    resolve_dentry(ctx, DR_KPROBE);
+    resolve_path(ctx, DR_KPROBE);
     return 0;
 }
 
@@ -155,11 +155,11 @@ int __attribute__((always_inline)) sys_rename_ret(void *ctx, int retval, int dr_
         syscall->resolver.key = syscall->rename.target_file.path_key;
         syscall->resolver.dentry = syscall->rename.src_dentry;
         syscall->resolver.discarder_type = 0;
-        syscall->resolver.callback = dr_type == DR_KPROBE ? DR_RENAME_CALLBACK_KPROBE_KEY : DR_RENAME_CALLBACK_TRACEPOINT_KEY;
+        syscall->resolver.callback = PR_PROGKEY_CB_RENAME_DST;
         syscall->resolver.iteration = 0;
         syscall->resolver.ret = 0;
 
-        resolve_dentry(ctx, dr_type);
+        resolve_path(ctx, dr_type);
     }
 
     // if the tail call failed we need to pop the syscall cache entry
