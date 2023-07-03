@@ -177,6 +177,15 @@ func getPathResolverTailCallRoutes() []manager.TailCallRoute {
 				EBPFFuncName: "kprobe_dr_security_inode_rmdir_callback",
 			},
 		},
+		// selinux callback
+		//  - kprobe only
+		{
+			ProgArrayName: "path_resolver_kprobe_progs",
+			Key:           12,
+			ProbeIdentificationPair: manager.ProbeIdentificationPair{
+				EBPFFuncName: "kprobe_dr_selinux_callback",
+			},
+		},
 	}
 
 	return routes
