@@ -54,6 +54,7 @@ int kretprobe_get_pipe_info(struct pt_regs *ctx) {
         syscall->splice.file_found = 1;
         syscall->resolver.key = syscall->splice.file.path_key;
         syscall->resolver.dentry = syscall->splice.dentry;
+        syscall->resolver.callback = DR_NO_CALLBACK;
         syscall->resolver.discarder_type = syscall->policy.mode != NO_FILTER ? EVENT_SPLICE : 0;
         syscall->resolver.iteration = 0;
         syscall->resolver.ret = 0;
@@ -98,11 +99,11 @@ int __attribute__((always_inline)) sys_splice_ret(void *ctx, int retval) {
         .pipe_exit_flag = syscall->splice.pipe_exit_flag,
     };
     fill_file_metadata(syscall->splice.dentry, &event.file.metadata);
+    fill_path_ring_buffer_ref(&event.file.path_ref);
 
     struct proc_cache_t *entry = fill_process_context(&event.process);
     fill_container_context(entry, &event.container);
     fill_span_context(&event.span);
-    fill_path_ring_buffer_ref(&event.file.path_ref);
 
     send_event(ctx, EVENT_SPLICE, event);
 

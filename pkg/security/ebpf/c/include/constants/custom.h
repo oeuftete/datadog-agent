@@ -76,7 +76,6 @@
 #define PR_PROGKEY_CB_SELINUX               12
 #define PR_PROGKEY_CB_SETATTR               13 // used by chmod/chown/utimes event types
 #define PR_PROGKEY_CB_SETXATTR              14 // used by setxattr/removexattr event types
-#define PR_PROGKEY_CB_SPLICE                15
 #define PR_PROGKEY_CB_UNLINK                16
 #define PR_PROGKEY_CB_UNSHARE_MNTNS_KPROBE  17
 
