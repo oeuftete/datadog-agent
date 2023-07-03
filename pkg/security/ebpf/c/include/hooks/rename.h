@@ -109,6 +109,17 @@ int kprobe_vfs_rename(struct pt_regs *ctx) {
     return 0;
 }
 
+SEC("kprobe/dr_rename_src_callback")
+int kprobe_dr_rename_src_callback(struct pt_regs *ctx) {
+    struct syscall_cache_t *syscall = peek_syscall(EVENT_RENAME);
+    if (!syscall) {
+        return 0;
+    }
+
+    fill_path_ring_buffer_ref(&syscall->rename.src_file.path_ref);
+    return 0;
+}
+
 int __attribute__((always_inline)) sys_rename_ret(void *ctx, int retval, int dr_type) {
     if (IS_UNHANDLED_ERROR(retval)) {
         return 0;
@@ -204,8 +215,8 @@ int __attribute__((always_inline)) dr_rename_callback(void *ctx, int retval) {
     struct proc_cache_t *entry = fill_process_context(&event.process);
     fill_container_context(entry, &event.container);
     fill_span_context(&event.span);
-    fill_path_ring_buffer_ref(&event.old.path_ref);
     fill_path_ring_buffer_ref(&event.new.path_ref);
+    event.old.path_ref = syscall->rename.src_file.path_ref;
 
     send_event(ctx, EVENT_RENAME, event);
 

@@ -61,13 +61,26 @@
 #define DR_ERPC_READ_PAGE_FAULT   5
 #define DR_ERPC_UNKNOWN_ERROR     6
 
-#define PR_PROGKEY_ENTRYPOINT          0
-#define PR_PROGKEY_LOOP                1
-#define PR_PROGKEY_CB_EXECUTABLE_KPROBE  2
-#define PR_PROGKEY_CB_INTERPRETER_KPROBE 3
-#define PR_PROGKEY_CB_MOUNT_KPROBE 4
-#define PR_PROGKEY_CB_MOUNT_TRACEPOINT 2
-#define PR_PROGKEY_CB_UNSHARE_MNTNS_KPROBE 5
+#define PR_PROGKEY_ENTRYPOINT               0 // same key for both kprobe and tracepoint
+#define PR_PROGKEY_LOOP                     1 // same key for both kprobe and tracepoint
+#define PR_PROGKEY_CB_OPEN                  2 // same key for both kprobe and tracepoint
+#define PR_PROGKEY_CB_MKDIR                 3 // same key for both kprobe and tracepoint
+#define PR_PROGKEY_CB_MOUNT                 4 // same key for both kprobe and tracepoint
+#define PR_PROGKEY_CB_LINK_DST              5 // same key for both kprobe and tracepoint
+#define PR_PROGKEY_CB_RENAME_DST            6 // same key for both kprobe and tracepoint
+#define PR_PROGKEY_CB_EXECUTABLE_KPROBE     7
+#define PR_PROGKEY_CB_INTERPRETER_KPROBE    8
+#define PR_PROGKEY_CB_LINK_SRC_KPROBE       9
+#define PR_PROGKEY_CB_MMAP                  10
+#define PR_PROGKEY_CB_MODULE                11
+#define PR_PROGKEY_CB_RENAME_SRC            12
+#define PR_PROGKEY_CB_RMDIR                 13
+#define PR_PROGKEY_CB_SELINUX               14
+#define PR_PROGKEY_CB_SETATTR               15
+#define PR_PROGKEY_CB_SETXATTR              16
+#define PR_PROGKEY_CB_SPLICE                17
+#define PR_PROGKEY_CB_UNLINK                18
+#define PR_PROGKEY_CB_UNSHARE_MNTNS_KPROBE  19
 
 #define DNS_MAX_LENGTH 256
 #define DNS_EVENT_KEY 0

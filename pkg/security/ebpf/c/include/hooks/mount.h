@@ -366,7 +366,7 @@ int __attribute__((always_inline)) sys_mount_ret(void *ctx, int retval, int dr_t
     syscall->resolver.key = mp_key;
     syscall->resolver.dentry = dentry;
     syscall->resolver.discarder_type = 0;
-    syscall->resolver.callback = dr_type == DR_KPROBE ? PR_PROGKEY_CB_MOUNT_KPROBE : PR_PROGKEY_CB_MOUNT_TRACEPOINT;
+    syscall->resolver.callback = PR_PROGKEY_CB_MOUNT;
     syscall->resolver.iteration = 0;
     syscall->resolver.ret = 0;
 

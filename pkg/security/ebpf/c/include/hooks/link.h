@@ -92,7 +92,7 @@ int kprobe_vfs_link(struct pt_regs *ctx) {
     syscall->resolver.iteration = 0;
     syscall->resolver.ret = 0;
 
-    resolve_dentry(ctx, DR_KPROBE);
+    resolve_path(ctx, DR_KPROBE);
     return 0;
 }
 
@@ -102,6 +102,8 @@ int __attribute__((always_inline)) kprobe_dr_link_src_callback(struct pt_regs *c
     if (!syscall) {
         return 0;
     }
+
+    fill_path_ring_buffer_ref(&syscall->link.src_file.path_ref);
 
     if (syscall->resolver.ret == DENTRY_DISCARDED) {
         monitor_discarded(EVENT_LINK);
@@ -137,7 +139,7 @@ int __attribute__((always_inline)) sys_link_ret(void *ctx, int retval, int dr_ty
         syscall->resolver.iteration = 0;
         syscall->resolver.ret = 0;
 
-        resolve_dentry(ctx, dr_type);
+        resolve_path(ctx, dr_type);
     }
 
     // if the tail call fails, we need to pop the syscall cache entry
@@ -191,8 +193,8 @@ int __attribute__((always_inline)) dr_link_dst_callback(void *ctx, int retval) {
     struct proc_cache_t *entry = fill_process_context(&event.process);
     fill_container_context(entry, &event.container);
     fill_span_context(&event.span);
-    fill_path_ring_buffer_ref(&event.source.path_ref);
     fill_path_ring_buffer_ref(&event.target.path_ref);
+    event.source.path_ref = syscall->link.src_file.path_ref;
 
     send_event(ctx, EVENT_LINK, event);
 

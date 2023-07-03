@@ -47,25 +47,41 @@ func getPathResolverTailCallRoutes() []manager.TailCallRoute {
 				EBPFFuncName: "tracepoint_path_resolver_loop",
 			},
 		},
-		// exec - executable path callback
-		//  - kprobe only
+		// open callback
+		//  - kprobe
 		{
 			ProgArrayName: "path_resolver_kprobe_progs",
 			Key:           2,
 			ProbeIdentificationPair: manager.ProbeIdentificationPair{
-				EBPFFuncName: "kprobe_handle_executable_path_cb",
+				EBPFFuncName: "kprobe_dr_open_callback",
 			},
 		},
-		// exec - interpreter path callback
-		//  - kprobe only
+		//  - tracepoint
+		{
+			ProgArrayName: "path_resolver_tracepoint_progs",
+			Key:           2,
+			ProbeIdentificationPair: manager.ProbeIdentificationPair{
+				EBPFFuncName: "tracepoint_dr_open_callback",
+			},
+		},
+		// mkdir callback
+		//  - kprobe
 		{
 			ProgArrayName: "path_resolver_kprobe_progs",
 			Key:           3,
 			ProbeIdentificationPair: manager.ProbeIdentificationPair{
-				EBPFFuncName: "kprobe_handle_interpreter_path_cb",
+				EBPFFuncName: "kprobe_dr_mkdir_callback",
 			},
 		},
-		// mount - mountpoint path callback
+		//  - tracepoint
+		{
+			ProgArrayName: "path_resolver_tracepoint_progs",
+			Key:           3,
+			ProbeIdentificationPair: manager.ProbeIdentificationPair{
+				EBPFFuncName: "tracepoint_dr_mkdir_callback",
+			},
+		},
+		// mount callback
 		//  - kprobe
 		{
 			ProgArrayName: "path_resolver_kprobe_progs",
@@ -77,20 +93,81 @@ func getPathResolverTailCallRoutes() []manager.TailCallRoute {
 		//  - tracepoint
 		{
 			ProgArrayName: "path_resolver_tracepoint_progs",
-			Key:           2,
+			Key:           4,
 			ProbeIdentificationPair: manager.ProbeIdentificationPair{
 				EBPFFuncName: "tracepoint_dr_mount_callback",
 			},
 		},
-		// unshare_mntns - mountpoint path callback
-		//  - kprobe only
+		// link dst callback
+		//  - kprobe
 		{
 			ProgArrayName: "path_resolver_kprobe_progs",
 			Key:           5,
 			ProbeIdentificationPair: manager.ProbeIdentificationPair{
-				EBPFFuncName: "kprobe_dr_unshare_mntns_stage_one_callback",
+				EBPFFuncName: "kprobe_dr_link_dst_callback",
 			},
 		},
+		//  - tracepoint
+		{
+			ProgArrayName: "path_resolver_tracepoint_progs",
+			Key:           5,
+			ProbeIdentificationPair: manager.ProbeIdentificationPair{
+				EBPFFuncName: "tracepoint_dr_link_dst_callback",
+			},
+		},
+		// rename dst callback
+		//  - kprobe
+		{
+			ProgArrayName: "path_resolver_kprobe_progs",
+			Key:           6,
+			ProbeIdentificationPair: manager.ProbeIdentificationPair{
+				EBPFFuncName: "kprobe_dr_rename_callback",
+			},
+		},
+		//  - tracepoint
+		{
+			ProgArrayName: "path_resolver_tracepoint_progs",
+			Key:           6,
+			ProbeIdentificationPair: manager.ProbeIdentificationPair{
+				EBPFFuncName: "tracepoint_dr_rename_callback",
+			},
+		},
+		// // exec - executable callback
+		// //  - kprobe only
+		// {
+		// 	ProgArrayName: "path_resolver_kprobe_progs",
+		// 	Key:           7,
+		// 	ProbeIdentificationPair: manager.ProbeIdentificationPair{
+		// 		EBPFFuncName: "kprobe_handle_executable_path_cb",
+		// 	},
+		// },
+		// // exec - interpreter callback
+		// //  - kprobe only
+		// {
+		// 	ProgArrayName: "path_resolver_kprobe_progs",
+		// 	Key:           8,
+		// 	ProbeIdentificationPair: manager.ProbeIdentificationPair{
+		// 		EBPFFuncName: "kprobe_handle_interpreter_path_cb",
+		// 	},
+		// },
+		// // link src callback
+		// //  - kprobe only
+		// {
+		// 	ProgArrayName: "path_resolver_kprobe_progs",
+		// 	Key:           9,
+		// 	ProbeIdentificationPair: manager.ProbeIdentificationPair{
+		// 		EBPFFuncName: "kprobe_dr_link_src_callback",
+		// 	},
+		// },
+		// // mmap
+		// //  - kprobe only
+		// {
+		// 	ProgArrayName: "path_resolver_kprobe_progs",
+		// 	Key:           10,
+		// 	ProbeIdentificationPair: manager.ProbeIdentificationPair{
+		// 		EBPFFuncName: "kprobe_dr_link_src_callback",
+		// 	},
+		// },
 	}
 
 	return routes
