@@ -60,11 +60,11 @@ int __attribute__((always_inline)) sys_mmap_ret(void *ctx, int retval, u64 addr)
 
     if (syscall->mmap.dentry != NULL) {
         fill_file_metadata(syscall->mmap.dentry, &event.file.metadata);
+        fill_path_ring_buffer_ref(&event.file.path_ref);
     }
     struct proc_cache_t *entry = fill_process_context(&event.process);
     fill_container_context(entry, &event.container);
     fill_span_context(&event.span);
-    fill_path_ring_buffer_ref(&event.file.path_ref);
 
     send_event(ctx, EVENT_MMAP, event);
     return 0;
