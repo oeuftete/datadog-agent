@@ -186,6 +186,15 @@ func getPathResolverTailCallRoutes() []manager.TailCallRoute {
 				EBPFFuncName: "kprobe_dr_selinux_callback",
 			},
 		},
+		// setattr callback (used by chmod/chown/utimes event types)
+		//  - kprobe only
+		{
+			ProgArrayName: "path_resolver_kprobe_progs",
+			Key:           13,
+			ProbeIdentificationPair: manager.ProbeIdentificationPair{
+				EBPFFuncName: "kprobe_dr_setattr_callback",
+			},
+		},
 	}
 
 	return routes

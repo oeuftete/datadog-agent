@@ -74,7 +74,7 @@
 #define PR_PROGKEY_CB_RENAME_SRC            10
 #define PR_PROGKEY_CB_RMDIR                 11
 #define PR_PROGKEY_CB_SELINUX               12
-#define PR_PROGKEY_CB_SETATTR               13
+#define PR_PROGKEY_CB_SETATTR               13 // used by chmod/chown/utimes event types
 #define PR_PROGKEY_CB_SETXATTR              14
 #define PR_PROGKEY_CB_SPLICE                15
 #define PR_PROGKEY_CB_UNLINK                16

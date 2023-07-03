@@ -81,7 +81,7 @@ int kprobe_security_inode_setattr(struct pt_regs *ctx) {
     syscall->resolver.dentry = syscall->setattr.dentry;
     syscall->resolver.key = syscall->setattr.file.path_key;
     syscall->resolver.discarder_type = syscall->policy.mode != NO_FILTER ? event_type : 0;
-    syscall->resolver.callback = DR_SETATTR_CALLBACK_KPROBE_KEY;
+    syscall->resolver.callback = PR_PROGKEY_CB_SETATTR;
     syscall->resolver.iteration = 0;
     syscall->resolver.ret = 0;
 
@@ -100,6 +100,8 @@ int __attribute__((always_inline)) kprobe_dr_setattr_callback(struct pt_regs *ct
         monitor_discarded(syscall->type);
         return discard_syscall(syscall);
     }
+
+    fill_path_ring_buffer_ref(&syscall->setattr.file.path_ref);
 
     return 0;
 }
