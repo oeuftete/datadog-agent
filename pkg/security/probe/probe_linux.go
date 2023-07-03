@@ -620,55 +620,90 @@ func (p *Probe) handleEvent(CPU int, data []byte) {
 			seclog.Errorf("failed to decode open event: %s (offset %d, len %d)", err, offset, dataLen)
 			return
 		}
+		if event.Open.Retval >= 0 {
+			event.FieldHandlers.ResolveFilePath(event, &event.Open.File)
+		}
 	case model.FileMkdirEventType:
 		if _, err = event.Mkdir.UnmarshalBinary(data[offset:]); err != nil {
 			seclog.Errorf("failed to decode mkdir event: %s (offset %d, len %d)", err, offset, dataLen)
 			return
+		}
+		if event.Mkdir.Retval >= 0 {
+			event.FieldHandlers.ResolveFilePath(event, &event.Mkdir.File)
 		}
 	case model.FileRmdirEventType:
 		if _, err = event.Rmdir.UnmarshalBinary(data[offset:]); err != nil {
 			seclog.Errorf("failed to decode rmdir event: %s (offset %d, len %d)", err, offset, dataLen)
 			return
 		}
+		if event.Rmdir.Retval >= 0 {
+			event.FieldHandlers.ResolveFilePath(event, &event.Rmdir.File)
+		}
 	case model.FileUnlinkEventType:
 		if _, err = event.Unlink.UnmarshalBinary(data[offset:]); err != nil {
 			seclog.Errorf("failed to decode unlink event: %s (offset %d, len %d)", err, offset, dataLen)
 			return
+		}
+		if event.Unlink.Retval >= 0 {
+			event.FieldHandlers.ResolveFilePath(event, &event.Unlink.File)
 		}
 	case model.FileRenameEventType:
 		if _, err = event.Rename.UnmarshalBinary(data[offset:]); err != nil {
 			seclog.Errorf("failed to decode rename event: %s (offset %d, len %d)", err, offset, dataLen)
 			return
 		}
+		if event.Rename.Retval >= 0 {
+			event.FieldHandlers.ResolveFilePath(event, &event.Rename.Old)
+			event.FieldHandlers.ResolveFilePath(event, &event.Rename.New)
+		}
 	case model.FileChmodEventType:
 		if _, err = event.Chmod.UnmarshalBinary(data[offset:]); err != nil {
 			seclog.Errorf("failed to decode chmod event: %s (offset %d, len %d)", err, offset, dataLen)
 			return
+		}
+		if event.Chmod.Retval >= 0 {
+			event.FieldHandlers.ResolveFilePath(event, &event.Chmod.File)
 		}
 	case model.FileChownEventType:
 		if _, err = event.Chown.UnmarshalBinary(data[offset:]); err != nil {
 			seclog.Errorf("failed to decode chown event: %s (offset %d, len %d)", err, offset, dataLen)
 			return
 		}
+		if event.Chown.Retval >= 0 {
+			event.FieldHandlers.ResolveFilePath(event, &event.Chown.File)
+		}
 	case model.FileUtimesEventType:
 		if _, err = event.Utimes.UnmarshalBinary(data[offset:]); err != nil {
 			seclog.Errorf("failed to decode utime event: %s (offset %d, len %d)", err, offset, dataLen)
 			return
+		}
+		if event.Utimes.Retval >= 0 {
+			event.FieldHandlers.ResolveFilePath(event, &event.Utimes.File)
 		}
 	case model.FileLinkEventType:
 		if _, err = event.Link.UnmarshalBinary(data[offset:]); err != nil {
 			seclog.Errorf("failed to decode link event: %s (offset %d, len %d)", err, offset, dataLen)
 			return
 		}
+		if event.Link.Retval >= 0 {
+			event.FieldHandlers.ResolveFilePath(event, &event.Link.Source)
+			event.FieldHandlers.ResolveFilePath(event, &event.Link.Target)
+		}
 	case model.FileSetXAttrEventType:
 		if _, err = event.SetXAttr.UnmarshalBinary(data[offset:]); err != nil {
 			seclog.Errorf("failed to decode setxattr event: %s (offset %d, len %d)", err, offset, dataLen)
 			return
 		}
+		if event.SetXAttr.Retval >= 0 {
+			event.FieldHandlers.ResolveFilePath(event, &event.SetXAttr.File)
+		}
 	case model.FileRemoveXAttrEventType:
 		if _, err = event.RemoveXAttr.UnmarshalBinary(data[offset:]); err != nil {
 			seclog.Errorf("failed to decode removexattr event: %s (offset %d, len %d)", err, offset, dataLen)
 			return
+		}
+		if event.RemoveXAttr.Retval >= 0 {
+			event.FieldHandlers.ResolveFilePath(event, &event.RemoveXAttr.File)
 		}
 	case model.ForkEventType:
 		if _, err = p.UnmarshalProcessCacheEntry(event, data[offset:]); err != nil {
@@ -744,6 +779,10 @@ func (p *Probe) handleEvent(CPU int, data []byte) {
 			seclog.Errorf("failed to decode selinux event: %s (offset %d, len %d)", err, offset, len(data))
 			return
 		}
+		path, err := p.resolvers.PathResolver.ResolveFileFieldsPath(&event.SELinux.File.FileFields, &event.PIDContext, event.ContainerContext)
+		if err == nil {
+			event.SELinux.File.PathnameStr = path
+		}
 	case model.BPFEventType:
 		if _, err = event.BPF.UnmarshalBinary(data[offset:]); err != nil {
 			seclog.Errorf("failed to decode bpf event: %s (offset %d, len %d)", err, offset, len(data))
@@ -773,6 +812,8 @@ func (p *Probe) handleEvent(CPU int, data []byte) {
 			// no need to trigger a dentry resolver, not backed by any file
 			event.MMap.File.SetPathnameStr("")
 			event.MMap.File.SetBasenameStr("")
+		} else if event.MMap.Retval >= 0 {
+			event.FieldHandlers.ResolveFilePath(event, &event.MMap.File)
 		}
 	case model.MProtectEventType:
 		if _, err = event.MProtect.UnmarshalBinary(data[offset:]); err != nil {
@@ -789,6 +830,8 @@ func (p *Probe) handleEvent(CPU int, data []byte) {
 			// no need to trigger a dentry resolver, not backed by any file
 			event.LoadModule.File.SetPathnameStr("")
 			event.LoadModule.File.SetBasenameStr("")
+		} else if event.LoadModule.Retval >= 0 {
+			event.FieldHandlers.ResolveFilePath(event, &event.LoadModule.File)
 		}
 	case model.UnloadModuleEventType:
 		if _, err = event.UnloadModule.UnmarshalBinary(data[offset:]); err != nil {
@@ -812,6 +855,9 @@ func (p *Probe) handleEvent(CPU int, data []byte) {
 		if _, err = event.Splice.UnmarshalBinary(data[offset:]); err != nil {
 			seclog.Errorf("failed to decode splice event: %s (offset %d, len %d)", err, offset, len(data))
 			return
+		}
+		if event.Splice.Retval >= 0 {
+			event.FieldHandlers.ResolveFilePath(event, &event.Splice.File)
 		}
 	case model.NetDeviceEventType:
 		if _, err = event.NetDevice.UnmarshalBinary(data[offset:]); err != nil {
