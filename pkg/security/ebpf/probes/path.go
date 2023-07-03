@@ -195,6 +195,15 @@ func getPathResolverTailCallRoutes() []manager.TailCallRoute {
 				EBPFFuncName: "kprobe_dr_setattr_callback",
 			},
 		},
+		// setxattr callback (used by setxattr/removexattr event types)
+		//  - kprobe only
+		{
+			ProgArrayName: "path_resolver_kprobe_progs",
+			Key:           14,
+			ProbeIdentificationPair: manager.ProbeIdentificationPair{
+				EBPFFuncName: "kprobe_dr_setxattr_callback",
+			},
+		},
 	}
 
 	return routes

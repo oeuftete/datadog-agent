@@ -94,7 +94,7 @@ int __attribute__((always_inline)) trace__vfs_setxattr(struct pt_regs *ctx, u64 
     syscall->resolver.dentry = syscall->xattr.dentry;
     syscall->resolver.key = syscall->xattr.file.path_key;
     syscall->resolver.discarder_type = syscall->policy.mode != NO_FILTER ? event_type : 0;
-    syscall->resolver.callback = DR_SETXATTR_CALLBACK_KPROBE_KEY;
+    syscall->resolver.callback = PR_PROGKEY_CB_SETXATTR;
     syscall->resolver.iteration = 0;
     syscall->resolver.ret = 0;
 
@@ -113,6 +113,8 @@ int __attribute__((always_inline)) kprobe_dr_setxattr_callback(struct pt_regs *c
         monitor_discarded(EVENT_SETXATTR);
         return discard_syscall(syscall);
     }
+
+    fill_path_ring_buffer_ref(&syscall->xattr.file.path_ref);
 
     return 0;
 }
@@ -149,7 +151,6 @@ int __attribute__((always_inline)) sys_xattr_ret(void *ctx, int retval, u64 even
     fill_container_context(entry, &event.container);
     fill_file_metadata(syscall->xattr.dentry, &event.file.metadata);
     fill_span_context(&event.span);
-    fill_path_ring_buffer_ref(&event.file.path_ref);
 
     send_event(ctx, event_type, event);
 
