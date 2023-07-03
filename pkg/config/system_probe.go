@@ -27,6 +27,7 @@ const (
 	evNS                         = "event_monitoring_config"
 	smjtNS                       = smNS + ".java_tls"
 	diNS                         = "dynamic_instrumentation"
+	wcdNS                        = "windows_crash_detection"
 	defaultConnsMessageBatchSize = 600
 
 	// defaultSystemProbeBPFDir is the default path for eBPF programs
@@ -249,6 +250,7 @@ func InitSystemProbeConfig(cfg Config) {
 
 	// oom_kill module
 	cfg.BindEnvAndSetDefault(join(spNS, "enable_oom_kill"), false)
+
 	// tcp_queue_length module
 	cfg.BindEnvAndSetDefault(join(spNS, "enable_tcp_queue_length"), false)
 	// process module
@@ -383,6 +385,10 @@ func InitSystemProbeConfig(cfg Config) {
 	cfg.BindEnvAndSetDefault("runtime_security_config.hash_resolver.max_hash_burst", 1000)
 	cfg.BindEnvAndSetDefault("runtime_security_config.hash_resolver.hash_algorithms", []string{"sha1", "sha256"})
 	cfg.BindEnvAndSetDefault("runtime_security_config.hash_resolver.cache_size", 500)
+
+	// Windows crash detection
+	cfg.BindEnvAndSetDefault(join(wcdNS, "enabled"), false)
+
 }
 
 func join(pieces ...string) string {

@@ -35,6 +35,7 @@ const (
 	EventMonitorModule           ModuleName = "event_monitor"
 	DynamicInstrumentationModule ModuleName = "dynamic_instrumentation"
 	EBPFModule                   ModuleName = "ebpf"
+	WindowsCrashDetectModule     ModuleName = "windows_crash_detection"
 )
 
 // Config represents the configuration options for the system-probe
@@ -142,7 +143,6 @@ func load() (*Config, error) {
 	if cfg.GetBool(spNS("enable_oom_kill")) {
 		c.EnabledModules[OOMKillProbeModule] = struct{}{}
 	}
-
 	if cfg.GetBool(secNS("enabled")) ||
 		cfg.GetBool(secNS("fim_enabled")) ||
 		cfg.GetBool(evNS("process.enabled")) ||
@@ -157,6 +157,9 @@ func load() (*Config, error) {
 	}
 	if cfg.GetBool(nskey("ebpf_check", "enabled")) {
 		c.EnabledModules[EBPFModule] = struct{}{}
+	}
+	if cfg.GetBool(wcdNS("enabled")) {
+		c.EnabledModules[WindowsCrashDetectModule] = struct{}{}
 	}
 
 	c.Enabled = len(c.EnabledModules) > 0

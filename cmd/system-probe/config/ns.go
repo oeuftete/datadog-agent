@@ -45,3 +45,7 @@ func evNS(k ...string) string {
 func nskey(ns string, pieces ...string) string {
 	return strings.Join(append([]string{ns}, pieces...), ".")
 }
+
+func wcdNS(k ...string) string {
+	return nskey("windows_crash_detection", k...)
+}
