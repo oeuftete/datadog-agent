@@ -208,9 +208,18 @@ func getPathResolverTailCallRoutes() []manager.TailCallRoute {
 		//  - kprobe only
 		{
 			ProgArrayName: "path_resolver_kprobe_progs",
-			Key:           16,
+			Key:           15,
 			ProbeIdentificationPair: manager.ProbeIdentificationPair{
 				EBPFFuncName: "kprobe_dr_unlink_callback",
+			},
+		},
+		// unshare callback
+		//  - kprobe only
+		{
+			ProgArrayName: "path_resolver_kprobe_progs",
+			Key:           16,
+			ProbeIdentificationPair: manager.ProbeIdentificationPair{
+				EBPFFuncName: "kprobe_dr_unshare_mntns_stage_one_callback",
 			},
 		},
 	}

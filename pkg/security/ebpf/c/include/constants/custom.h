@@ -76,8 +76,8 @@
 #define PR_PROGKEY_CB_SELINUX               12
 #define PR_PROGKEY_CB_SETATTR               13 // used by chmod/chown/utimes event types
 #define PR_PROGKEY_CB_SETXATTR              14 // used by setxattr/removexattr event types
-#define PR_PROGKEY_CB_UNLINK                16
-#define PR_PROGKEY_CB_UNSHARE_MNTNS_KPROBE  17
+#define PR_PROGKEY_CB_UNLINK                15
+#define PR_PROGKEY_CB_UNSHARE_MNTNS_KPROBE  16
 
 #define DNS_MAX_LENGTH 256
 #define DNS_EVENT_KEY 0
