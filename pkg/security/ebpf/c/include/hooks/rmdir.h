@@ -96,7 +96,7 @@ int kprobe_security_inode_rmdir(struct pt_regs *ctx) {
         syscall->resolver.key = key;
         syscall->resolver.dentry = dentry;
         syscall->resolver.discarder_type = syscall->policy.mode != NO_FILTER ? syscall->type : 0;
-        syscall->resolver.callback = DR_SECURITY_INODE_RMDIR_CALLBACK_KPROBE_KEY;
+        syscall->resolver.callback = PR_PROGKEY_CB_RMDIR;
         syscall->resolver.iteration = 0;
         syscall->resolver.ret = 0;
         resolve_path(ctx, DR_KPROBE);
@@ -110,6 +110,8 @@ int __attribute__((always_inline)) kprobe_dr_security_inode_rmdir_callback(struc
     if (!syscall) {
         return 0;
     }
+
+    fill_path_ring_buffer_ref(&syscall->rmdir.file.path_ref);
 
     if (syscall->resolver.ret == DENTRY_DISCARDED) {
         monitor_discarded(EVENT_RMDIR);
@@ -139,7 +141,6 @@ int __attribute__((always_inline)) sys_rmdir_ret(void *ctx, int retval) {
         struct proc_cache_t *entry = fill_process_context(&event.process);
         fill_container_context(entry, &event.container);
         fill_span_context(&event.span);
-        fill_path_ring_buffer_ref(&event.file.path_ref);
 
         send_event(ctx, EVENT_RMDIR, event);
     }

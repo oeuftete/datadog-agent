@@ -168,6 +168,15 @@ func getPathResolverTailCallRoutes() []manager.TailCallRoute {
 				EBPFFuncName: "kprobe_dr_rename_src_callback",
 			},
 		},
+		// rmdir callback
+		//  - kprobe only
+		{
+			ProgArrayName: "path_resolver_kprobe_progs",
+			Key:           11,
+			ProbeIdentificationPair: manager.ProbeIdentificationPair{
+				EBPFFuncName: "kprobe_dr_security_inode_rmdir_callback",
+			},
+		},
 	}
 
 	return routes
