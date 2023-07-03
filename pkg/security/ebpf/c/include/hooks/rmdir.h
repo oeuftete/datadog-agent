@@ -111,12 +111,22 @@ int __attribute__((always_inline)) kprobe_dr_security_inode_rmdir_callback(struc
         return 0;
     }
 
-    fill_path_ring_buffer_ref(&syscall->rmdir.file.path_ref);
-
     if (syscall->resolver.ret == DENTRY_DISCARDED) {
         monitor_discarded(EVENT_RMDIR);
         return mark_as_discarded(syscall);
     }
+
+    switch (syscall->type) {
+        case EVENT_RMDIR:
+            fill_path_ring_buffer_ref(&syscall->rmdir.file.path_ref);
+            break;
+        case EVENT_UNLINK:
+            fill_path_ring_buffer_ref(&syscall->unlink.file.path_ref);
+            break;
+        default:
+            break;
+    }
+
     return 0;
 }
 

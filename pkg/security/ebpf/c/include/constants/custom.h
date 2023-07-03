@@ -72,7 +72,7 @@
 #define PR_PROGKEY_CB_INTERPRETER_KPROBE    8
 #define PR_PROGKEY_CB_LINK_SRC_KPROBE       9
 #define PR_PROGKEY_CB_RENAME_SRC            10
-#define PR_PROGKEY_CB_RMDIR                 11
+#define PR_PROGKEY_CB_RMDIR                 11 // used by rmdir/unlink event types
 #define PR_PROGKEY_CB_SELINUX               12
 #define PR_PROGKEY_CB_SETATTR               13 // used by chmod/chown/utimes event types
 #define PR_PROGKEY_CB_SETXATTR              14 // used by setxattr/removexattr event types

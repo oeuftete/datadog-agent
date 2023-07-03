@@ -77,7 +77,7 @@ int kprobe_vfs_unlink(struct pt_regs *ctx) {
     syscall->resolver.dentry = dentry;
     syscall->resolver.key = syscall->unlink.file.path_key;
     syscall->resolver.discarder_type = syscall->policy.mode != NO_FILTER ? EVENT_UNLINK : 0;
-    syscall->resolver.callback = DR_UNLINK_CALLBACK_KPROBE_KEY;
+    syscall->resolver.callback = PR_PROGKEY_CB_UNLINK;
     syscall->resolver.iteration = 0;
     syscall->resolver.ret = 0;
 
@@ -95,6 +95,8 @@ int __attribute__((always_inline)) kprobe_dr_unlink_callback(struct pt_regs *ctx
     if (syscall->resolver.ret < 0) {
         return mark_as_discarded(syscall);
     }
+
+    fill_path_ring_buffer_ref(&syscall->unlink.file.path_ref);
 
     return 0;
 }
@@ -124,7 +126,6 @@ int __attribute__((always_inline)) sys_unlink_ret(void *ctx, int retval) {
             struct proc_cache_t *entry = fill_process_context(&event.process);
             fill_container_context(entry, &event.container);
             fill_span_context(&event.span);
-            fill_path_ring_buffer_ref(&event.file.path_ref);
 
             send_event(ctx, EVENT_RMDIR, event);
         } else {
@@ -138,7 +139,6 @@ int __attribute__((always_inline)) sys_unlink_ret(void *ctx, int retval) {
             struct proc_cache_t *entry = fill_process_context(&event.process);
             fill_container_context(entry, &event.container);
             fill_span_context(&event.span);
-            fill_path_ring_buffer_ref(&event.file.path_ref);
 
             send_event(ctx, EVENT_UNLINK, event);
         }
