@@ -17,6 +17,10 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/DataDog/datadog-go/v5/statsd"
+	"go.uber.org/atomic"
+
+	"github.com/DataDog/datadog-agent/pkg/security/metrics"
 	"github.com/DataDog/datadog-agent/pkg/security/probe/managerhelper"
 	"github.com/DataDog/datadog-agent/pkg/security/resolvers/dentry"
 	"github.com/DataDog/datadog-agent/pkg/security/resolvers/mount"
@@ -33,6 +37,7 @@ type ResolverInterface interface {
 	ResolveMountRoot(ev *model.Event, e *model.Mount) (string, error)
 	SetMountPoint(ev *model.Event, e *model.Mount) error
 	ResolveMountPoint(ev *model.Event, e *model.Mount) (string, error)
+	SendStats() error
 	Start(*manager.Manager) error
 	Close() error
 }
@@ -69,6 +74,10 @@ func (n *NoResolver) SetMountPoint(ev *model.Event, e *model.Mount) error {
 // ResolveMountPoint resolves the mountpoint to a full path
 func (n *NoResolver) ResolveMountPoint(ev *model.Event, e *model.Mount) (string, error) {
 	return "", nil
+}
+
+func (n *NoResolver) SendStats() error {
+	return nil
 }
 
 func (n *NoResolver) Start(m *manager.Manager) error {
@@ -181,42 +190,78 @@ func NewResolver(dentryResolver *dentry.Resolver, mountResolver *mount.Resolver)
 // 	return nil
 // }
 
+type pathResolutionFailureCause uint8
+
+const (
+	unknown pathResolutionFailureCause = iota
+	truncated
+	zeroLength
+	tooBig
+	outOfBounds
+	invalidCPU
+	hashMismatch
+	max
+)
+
+var pathResolutionFailureCauses = [...]string{
+	"unknown",
+	"truncated",
+	"zero_length",
+	"too_big",
+	"out_of_bounds",
+	"invalid_cpu",
+	"hash_mismatch",
+}
+
+func (cause pathResolutionFailureCause) String() string {
+	return pathResolutionFailureCauses[cause]
+}
+
 const PathRingBuffersSize = uint64(131072)
 
 // Resolver describes a resolvers for path and file names
 type PathRingsResolver struct {
-	mountResolver *mount.Resolver
-	fnv1a         hash.Hash64
-	numCPU        uint64
-	pathRings     []byte
+	mountResolver   *mount.Resolver
+	statsdClient    statsd.ClientInterface
+	fnv1a           hash.Hash64
+	numCPU          uint64
+	pathRings       []byte
+	failureCounters [max]atomic.Int64
+	successCounter  atomic.Int64
 }
 
 // NewResolver returns a new path resolver
-func NewPathRingsResolver(mountResolver *mount.Resolver) *PathRingsResolver {
+func NewPathRingsResolver(mountResolver *mount.Resolver, statsdClient statsd.ClientInterface) *PathRingsResolver {
 	return &PathRingsResolver{
 		mountResolver: mountResolver,
+		statsdClient:  statsdClient,
 		fnv1a:         fnv.New64a(),
 	}
 }
 
 func (pr *PathRingsResolver) resolvePath(ref *model.PathRingBufferRef) (string, error) {
 	if ref.Length == math.MaxUint64 {
+		pr.failureCounters[truncated].Inc()
 		return "", errTruncatedPath
 	}
 
 	if ref.Length == 0 {
+		pr.failureCounters[zeroLength].Inc()
 		return "", fmt.Errorf("path ref length is 0")
 	}
 
 	if ref.Length > PathRingBuffersSize {
+		pr.failureCounters[tooBig].Inc()
 		return "", fmt.Errorf("path ref length exceeds ring buffer size: %d", ref.Length)
 	}
 
 	if ref.ReadCursor > PathRingBuffersSize {
+		pr.failureCounters[outOfBounds].Inc()
 		return "", fmt.Errorf("path ref read cursor is out-of-bounds: %d", ref.ReadCursor)
 	}
 
 	if ref.CPU >= uint32(pr.numCPU) {
+		pr.failureCounters[invalidCPU].Inc()
 		return "", fmt.Errorf("path ref CPU number is invalid: %d", ref.CPU)
 	}
 
@@ -235,16 +280,19 @@ func (pr *PathRingsResolver) resolvePath(ref *model.PathRingBufferRef) (string, 
 	pr.fnv1a.Write([]byte(pathStr))
 	hash := pr.fnv1a.Sum64()
 	if ref.Hash != hash {
+		pr.failureCounters[hashMismatch].Inc()
 		return "", fmt.Errorf("path ref hash mismatch (expected %d, got %d)", ref.Hash, hash)
 	}
 
-	if pathStr == "/" {
-		return pathStr, nil
+	if pathStr != "/" {
+		pathStr = strings.TrimSuffix(pathStr, "/")
+		pathParts := strings.Split(pathStr, "/")
+		pathStr = dentry.ComputeFilenameFromParts(pathParts)
 	}
 
-	pathStr = strings.TrimSuffix(pathStr, "/")
-	pathParts := strings.Split(pathStr, "/")
-	return dentry.ComputeFilenameFromParts(pathParts), nil
+	pr.successCounter.Inc()
+
+	return pathStr, nil
 }
 
 func (pr *PathRingsResolver) ResolveBasename(e *model.FileFields) string {
@@ -359,4 +407,23 @@ func (pr *PathRingsResolver) Start(m *manager.Manager) error {
 
 func (pr *PathRingsResolver) Close() error {
 	return unix.Munmap(pr.pathRings)
+}
+
+func (pr *PathRingsResolver) SendStats() error {
+	for cause, counter := range pr.failureCounters {
+		if cause > 0 {
+			val := counter.Swap(0)
+			if val > 0 {
+				tags := []string{fmt.Sprintf("cause:%s", pathResolutionFailureCause(cause).String())}
+				pr.statsdClient.Count(metrics.MetricPathResolutionFailure, val, tags, 1.0)
+			}
+		}
+	}
+
+	val := pr.successCounter.Swap(0)
+	if val > 0 {
+		pr.statsdClient.Count(metrics.MetricPathResolutionSuccess, val, []string{}, 1.0)
+	}
+
+	return nil
 }
