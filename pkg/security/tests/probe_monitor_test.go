@@ -7,48 +7,60 @@
 
 package tests
 
-// func TestRulesetLoaded(t *testing.T) {
-// 	rule := &rules.RuleDefinition{
-// 		ID:         "path_test",
-// 		Expression: `open.file.path == "/aaaaaaaaaaaaaaaaaaaaaaaaa" && open.flags & O_CREAT != 0`,
-// 	}
+import (
+	"syscall"
+	"testing"
+	"time"
 
-// 	probeMonitorOpts := testOpts{}
-// 	test, err := newTestModule(t, nil, []*rules.RuleDefinition{rule}, probeMonitorOpts)
-// 	if err != nil {
-// 		t.Fatal(err)
-// 	}
-// 	defer test.Close()
+	"github.com/DataDog/datadog-agent/pkg/security/events"
+	"github.com/DataDog/datadog-agent/pkg/security/metrics"
+	"github.com/DataDog/datadog-agent/pkg/security/secl/model"
+	"github.com/DataDog/datadog-agent/pkg/security/secl/rules"
+	"github.com/stretchr/testify/assert"
+)
 
-// 	test.cws.SendStats()
+func TestRulesetLoaded(t *testing.T) {
+	rule := &rules.RuleDefinition{
+		ID:         "path_test",
+		Expression: `open.file.path == "/aaaaaaaaaaaaaaaaaaaaaaaaa" && open.flags & O_CREAT != 0`,
+	}
 
-// 	key := metrics.MetricRuleSetLoaded
-// 	assert.NotEmpty(t, test.statsdClient.Get(key))
-// 	assert.NotZero(t, test.statsdClient.Get(key))
+	probeMonitorOpts := testOpts{}
+	test, err := newTestModule(t, nil, []*rules.RuleDefinition{rule}, probeMonitorOpts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer test.Close()
 
-// 	test.statsdClient.Flush()
+	test.cws.SendStats()
 
-// 	t.Run("ruleset_loaded", func(t *testing.T) {
-// 		count := test.statsdClient.Get(key)
-// 		assert.Zero(t, count)
+	key := metrics.MetricRuleSetLoaded
+	assert.NotEmpty(t, test.statsdClient.Get(key))
+	assert.NotZero(t, test.statsdClient.Get(key))
 
-// 		err = test.GetCustomEventSent(t, func() error {
-// 			// force a reload
-// 			return syscall.Kill(syscall.Getpid(), syscall.SIGHUP)
-// 		}, func(rule *rules.Rule, customEvent *events.CustomEvent) bool {
-// 			assert.Equal(t, events.RulesetLoadedRuleID, rule.ID, "wrong rule")
+	test.statsdClient.Flush()
 
-// 			test.cws.SendStats()
+	t.Run("ruleset_loaded", func(t *testing.T) {
+		count := test.statsdClient.Get(key)
+		assert.Zero(t, count)
 
-// 			assert.Equal(t, count+1, test.statsdClient.Get(key))
+		err = test.GetCustomEventSent(t, func() error {
+			// force a reload
+			return syscall.Kill(syscall.Getpid(), syscall.SIGHUP)
+		}, func(rule *rules.Rule, customEvent *events.CustomEvent) bool {
+			assert.Equal(t, events.RulesetLoadedRuleID, rule.ID, "wrong rule")
 
-// 			return validateRuleSetLoadedSchema(t, customEvent)
-// 		}, 20*time.Second, model.CustomRulesetLoadedEventType)
-// 		if err != nil {
-// 			t.Fatal(err)
-// 		}
-// 	})
-// }
+			test.cws.SendStats()
+
+			assert.Equal(t, count+1, test.statsdClient.Get(key))
+
+			return validateRuleSetLoadedSchema(t, customEvent)
+		}, 20*time.Second, model.CustomRulesetLoadedEventType)
+		if err != nil {
+			t.Fatal(err)
+		}
+	})
+}
 
 // func truncatedParents(t *testing.T, opts testOpts) {
 // 	var truncatedParents string
