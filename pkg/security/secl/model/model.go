@@ -682,7 +682,7 @@ type FileFields struct {
 	CTime uint64 `field:"change_time"`                                                 // SECLDoc[change_time] Definition:`Change time of the file`
 	MTime uint64 `field:"modification_time"`                                           // SECLDoc[modification_time] Definition:`Modification time of the file`
 
-	PathKey
+	DentryKey
 	PathRef      PathRingBufferRef `field:"-" json:"-"`
 	InUpperLayer bool              `field:"in_upper_layer,handler:ResolveFileFieldsInUpperLayer"` // SECLDoc[in_upper_layer] Definition:`Indicator of the file layer, for example, in an OverlayFS`
 
@@ -1254,70 +1254,81 @@ type PathRingBufferRef struct {
 	CPU        uint32 `field:"-"`
 }
 
-// PathKey identifies an entry in the dentry cache
-type PathKey struct {
+type DentryKey struct {
 	Inode   uint64 `field:"inode"`    // SECLDoc[inode] Definition:`Inode of the file`
 	MountID uint32 `field:"mount_id"` // SECLDoc[mount_id] Definition:`Mount ID of the file`
 	PathID  uint32 `field:"-"`
 }
 
-func (p *PathKey) Write(buffer []byte) {
-	ByteOrder.PutUint64(buffer[0:8], p.Inode)
-	ByteOrder.PutUint32(buffer[8:12], p.MountID)
-	ByteOrder.PutUint32(buffer[12:16], p.PathID)
-}
+// PathKey identifies an entry in the dentry cache
+// type PathKey struct {
+// 	Inode   uint64 `field:"inode"`    // SECLDoc[inode] Definition:`Inode of the file`
+// 	MountID uint32 `field:"mount_id"` // SECLDoc[mount_id] Definition:`Mount ID of the file`
+// 	PathID  uint32 `field:"-"`
+// }
 
-// IsNull returns true if a key is invalid
-func (p *PathKey) IsNull() bool {
-	return p.Inode == 0 && p.MountID == 0
-}
+// func (p *PathKey) Write(buffer []byte) {
+// 	ByteOrder.PutUint64(buffer[0:8], p.Inode)
+// 	ByteOrder.PutUint32(buffer[8:12], p.MountID)
+// 	ByteOrder.PutUint32(buffer[12:16], p.PathID)
+// }
 
-func (p *PathKey) String() string {
-	return fmt.Sprintf("%x/%x", p.MountID, p.Inode)
-}
+// // IsNull returns true if a key is invalid
+// func (p *PathKey) IsNull() bool {
+// 	return p.Inode == 0 && p.MountID == 0
+// }
 
-// MarshalBinary returns the binary representation of a path key
-func (p *PathKey) MarshalBinary() ([]byte, error) {
-	if p.IsNull() {
-		return nil, &ErrInvalidKeyPath{Inode: p.Inode, MountID: p.MountID}
-	}
+// func (p *PathKey) String() string {
+// 	return fmt.Sprintf("%x/%x", p.MountID, p.Inode)
+// }
 
-	buff := make([]byte, 16)
-	p.Write(buff)
+// // MarshalBinary returns the binary representation of a path key
+// func (p *PathKey) MarshalBinary() ([]byte, error) {
+// 	if p.IsNull() {
+// 		return nil, &ErrInvalidKeyPath{Inode: p.Inode, MountID: p.MountID}
+// 	}
 
-	return buff, nil
-}
+// 	buff := make([]byte, 16)
+// 	p.Write(buff)
 
-// PathLeafSize defines path_leaf struct size
-const PathLeafSize = PathKeySize + MaxSegmentLength + 1 + 2 + 6 // path_key + name + len + padding
+// 	return buff, nil
+// }
 
-// PathLeaf is the go representation of the eBPF path_leaf_t structure
-type PathLeaf struct {
-	Parent PathKey
-	Name   [MaxSegmentLength + 1]byte
-	Len    uint16
-}
+// // PathLeafSize defines path_leaf struct size
+// const PathLeafSize = PathKeySize + MaxSegmentLength + 1 + 2 + 6 // path_key + name + len + padding
 
-// GetName returns the path value as a string
-func (pl *PathLeaf) GetName() string {
-	return NullTerminatedString(pl.Name[:])
-}
+// // PathLeaf is the go representation of the eBPF path_leaf_t structure
+// type PathLeaf struct {
+// 	Parent PathKey
+// 	Name   [MaxSegmentLength + 1]byte
+// 	Len    uint16
+// }
 
-// GetName returns the path value as a string
-func (pl *PathLeaf) SetName(name string) {
-	copy(pl.Name[:], []byte(name))
-	pl.Len = uint16(len(name) + 1)
-}
+// // GetName returns the path value as a string
+// func (pl *PathLeaf) GetName() string {
+// 	return NullTerminatedString(pl.Name[:])
+// }
 
-// MarshalBinary returns the binary representation of a path key
-func (pl *PathLeaf) MarshalBinary() ([]byte, error) {
-	buff := make([]byte, PathLeafSize)
+// // GetName returns the path value as a string
+// func (pl *PathLeaf) SetName(name string) {
+// 	copy(pl.Name[:], []byte(name))
+// 	pl.Len = uint16(len(name) + 1)
+// }
 
-	pl.Parent.Write(buff)
-	copy(buff[16:], pl.Name[:])
-	ByteOrder.PutUint16(buff[16+len(pl.Name):], pl.Len)
+// // MarshalBinary returns the binary representation of a path key
+// func (pl *PathLeaf) MarshalBinary() ([]byte, error) {
+// 	buff := make([]byte, PathLeafSize)
 
-	return buff, nil
+// 	pl.Parent.Write(buff)
+// 	copy(buff[16:], pl.Name[:])
+// 	ByteOrder.PutUint16(buff[16+len(pl.Name):], pl.Len)
+
+// 	return buff, nil
+// }
+
+// DentryLeaf is the go representation of the eBPF dentry_leaf_t structure
+type DentryLeaf struct {
+	Parent DentryKey
 }
 
 // ExtraFieldHandlers handlers not hold by any field

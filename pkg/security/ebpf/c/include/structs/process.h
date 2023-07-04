@@ -55,7 +55,7 @@ struct args_envs_parsing_context_t {
 // linux_binprm_t contains content from the linux_binprm struct, which holds the arguments used for loading binaries
 // We only need enough information from the executable field to be able to resolve the dentry.
 struct linux_binprm_t {
-    struct path_key_t interpreter;
+    struct dentry_key_t interpreter;
     struct pr_ring_buffer_ref_t path_ref;
 };
 

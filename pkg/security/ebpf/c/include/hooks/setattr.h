@@ -39,7 +39,7 @@ int kprobe_security_inode_setattr(struct pt_regs *ctx) {
         }
 
         if (valid & (ATTR_TOUCH | ATTR_ATIME_SET | ATTR_MTIME_SET)) {
-            if (syscall->setattr.file.path_key.ino) {
+            if (syscall->setattr.file.dentry_key.ino) {
                 return 0;
             }
             bpf_probe_read(&syscall->setattr.atime, sizeof(syscall->setattr.atime), &iattr->ia_atime);
@@ -47,13 +47,13 @@ int kprobe_security_inode_setattr(struct pt_regs *ctx) {
         }
     }
 
-    if (syscall->setattr.file.path_key.ino) {
+    if (syscall->setattr.file.dentry_key.ino) {
         return 0;
     }
 
     syscall->setattr.dentry = dentry;
 
-    // the mount id of path_key is resolved by kprobe/mnt_want_write. It is already set by the time we reach this probe.
+    // the mount id of dentry_key is resolved by kprobe/mnt_want_write. It is already set by the time we reach this probe.
     set_file_inode(dentry, &syscall->setattr.file, 0);
 
     u64 event_type = 0;
@@ -79,7 +79,7 @@ int kprobe_security_inode_setattr(struct pt_regs *ctx) {
     }
 
     syscall->resolver.dentry = syscall->setattr.dentry;
-    syscall->resolver.key = syscall->setattr.file.path_key;
+    syscall->resolver.key = syscall->setattr.file.dentry_key;
     syscall->resolver.discarder_type = syscall->policy.mode != NO_FILTER ? event_type : 0;
     syscall->resolver.callback = PR_PROGKEY_CB_SETATTR;
     syscall->resolver.iteration = 0;

@@ -119,8 +119,6 @@ func NewResolvers(config *config.Config, manager *manager.Manager, statsdClient 
 	var pathResolver path.ResolverInterface
 	if opts.PathResolutionEnabled && opts.UsePathRingsResolution {
 		pathResolver = path.NewPathRingsResolver(mountResolver)
-	} else if opts.PathResolutionEnabled {
-		pathResolver = path.NewResolver(dentryResolver, mountResolver)
 	} else {
 		pathResolver = &path.NoResolver{}
 	}

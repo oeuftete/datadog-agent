@@ -38,7 +38,7 @@ int kprobe_security_inode_getattr(struct pt_regs *ctx) {
     }
 
     struct file_t entry = {
-        .path_key = {
+        .dentry_key = {
             .ino = inode,
             .mount_id = mount_id,
         },

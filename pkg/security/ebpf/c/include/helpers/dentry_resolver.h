@@ -6,14 +6,14 @@
 
 #include "buffer_selector.h"
 
-int __attribute__((always_inline)) resolve_dentry(void *ctx, int dr_type) {
-    if (dr_type == DR_KPROBE) {
-        bpf_tail_call_compat(ctx, &dentry_resolver_kprobe_progs, DR_KPROBE_AD_FILTER_KEY);
-    } else if (dr_type == DR_TRACEPOINT) {
-        bpf_tail_call_compat(ctx, &dentry_resolver_tracepoint_progs, DR_TRACEPOINT_AD_FILTER_KEY);
-    }
-    return 0;
-}
+// int __attribute__((always_inline)) resolve_dentry(void *ctx, int dr_type) {
+//     if (dr_type == DR_KPROBE) {
+//         bpf_tail_call_compat(ctx, &dentry_resolver_kprobe_progs, DR_KPROBE_AD_FILTER_KEY);
+//     } else if (dr_type == DR_TRACEPOINT) {
+//         bpf_tail_call_compat(ctx, &dentry_resolver_tracepoint_progs, DR_TRACEPOINT_AD_FILTER_KEY);
+//     }
+//     return 0;
+// }
 
 int __attribute__((always_inline)) monitor_resolution_err(u32 resolution_err) {
     if (resolution_err > 0) {

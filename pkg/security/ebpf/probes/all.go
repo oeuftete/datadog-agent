@@ -118,7 +118,7 @@ func AllMaps() []*manager.Map {
 		{Name: "inode_disc_revisions"},
 		{Name: "basename_approvers"},
 		// Dentry resolver table
-		{Name: "pathnames"},
+		{Name: "dentries"},
 		// Snapshot table
 		{Name: "exec_file_cache"},
 		// Open tables
@@ -194,7 +194,7 @@ func AllMapSpecEditors(numCPU int, opts MapSpecEditorOpts) map[string]manager.Ma
 	}
 
 	if opts.PathResolutionEnabled {
-		editors["pathnames"] = manager.MapSpecEditor{
+		editors["dentries"] = manager.MapSpecEditor{
 			MaxEntries: getMaxEntries(numCPU, minPathnamesEntries, maxPathnamesEntries),
 			EditorFlag: manager.EditMaxEntries,
 		}
@@ -271,9 +271,9 @@ func AllTailRoutes(ERPCDentryResolutionEnabled, networkEnabled, supportMmapableM
 // AllBPFProbeWriteUserProgramFunctions returns the list of program functions that use the bpf_probe_write_user helper
 func AllBPFProbeWriteUserProgramFunctions() []string {
 	return []string{
-		"kprobe_dentry_resolver_erpc_write_user",
+		// "kprobe_dentry_resolver_erpc_write_user",
 		"kprobe_dentry_resolver_parent_erpc_write_user",
-		"kprobe_dentry_resolver_segment_erpc_write_user",
+		// "kprobe_dentry_resolver_segment_erpc_write_user",
 	}
 }
 

@@ -85,9 +85,9 @@ struct syscall_cache_t {
             struct mount *parent;
             struct mount *bind_src_mnt;
             struct mountpoint *mp;
-            struct path_key_t root_key;
-            struct path_key_t mp_key;
-            struct path_key_t bind_src_key;
+            struct dentry_key_t root_key;
+            struct dentry_key_t mp_key;
+            struct dentry_key_t bind_src_key;
             struct pr_ring_buffer_ref_t root_ref;
             struct pr_ring_buffer_ref_t mp_ref;
             const char *fstype;
@@ -203,7 +203,7 @@ struct syscall_cache_t {
             struct mount *parent;
             struct dentry *mp_dentry;
             const char *fstype;
-            struct path_key_t mp_path_key;
+            struct dentry_key_t mp_dentry_key;
             struct pr_ring_buffer_ref_t mp_path_ref;
             unsigned long flags;
         } unshare_mntns;

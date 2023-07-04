@@ -48,7 +48,7 @@ int kprobe_vfs_unlink(struct pt_regs *ctx) {
         return 0;
     }
 
-    if (syscall->unlink.file.path_key.ino) {
+    if (syscall->unlink.file.dentry_key.ino) {
         return 0;
     }
 
@@ -73,9 +73,9 @@ int kprobe_vfs_unlink(struct pt_regs *ctx) {
         return mark_as_discarded(syscall);
     }
 
-    // the mount id of path_key is resolved by kprobe/mnt_want_write. It is already set by the time we reach this probe.
+    // the mount id of dentry_key is resolved by kprobe/mnt_want_write. It is already set by the time we reach this probe.
     syscall->resolver.dentry = dentry;
-    syscall->resolver.key = syscall->unlink.file.path_key;
+    syscall->resolver.key = syscall->unlink.file.dentry_key;
     syscall->resolver.discarder_type = syscall->policy.mode != NO_FILTER ? EVENT_UNLINK : 0;
     syscall->resolver.callback = PR_PROGKEY_CB_UNLINK;
     syscall->resolver.iteration = 0;
@@ -151,7 +151,7 @@ int __attribute__((always_inline)) sys_unlink_ret(void *ctx, int retval) {
     }
 
     if (retval >= 0) {
-        expire_inode_discarders(syscall->unlink.file.path_key.mount_id, syscall->unlink.file.path_key.ino);
+        expire_inode_discarders(syscall->unlink.file.dentry_key.mount_id, syscall->unlink.file.dentry_key.ino);
     }
 
     return 0;

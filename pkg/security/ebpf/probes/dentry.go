@@ -13,36 +13,36 @@ import manager "github.com/DataDog/ebpf-manager"
 func getDentryResolverTailCallRoutes(ERPCDentryResolutionEnabled, supportMmapableMaps bool) []manager.TailCallRoute {
 	routes := []manager.TailCallRoute{
 		// activity dump filter programs
-		{
-			ProgArrayName: "dentry_resolver_kprobe_progs",
-			Key:           ActivityDumpFilterKprobeKey,
-			ProbeIdentificationPair: manager.ProbeIdentificationPair{
-				EBPFFuncName: "kprobe_dentry_resolver_ad_filter",
-			},
-		},
-		{
-			ProgArrayName: "dentry_resolver_tracepoint_progs",
-			Key:           ActivityDumpFilterTracepointKey,
-			ProbeIdentificationPair: manager.ProbeIdentificationPair{
-				EBPFFuncName: "tracepoint_dentry_resolver_ad_filter",
-			},
-		},
+		// {
+		// 	ProgArrayName: "dentry_resolver_kprobe_progs",
+		// 	Key:           ActivityDumpFilterKprobeKey,
+		// 	ProbeIdentificationPair: manager.ProbeIdentificationPair{
+		// 		EBPFFuncName: "kprobe_dentry_resolver_ad_filter",
+		// 	},
+		// },
+		// {
+		// 	ProgArrayName: "dentry_resolver_tracepoint_progs",
+		// 	Key:           ActivityDumpFilterTracepointKey,
+		// 	ProbeIdentificationPair: manager.ProbeIdentificationPair{
+		// 		EBPFFuncName: "tracepoint_dentry_resolver_ad_filter",
+		// 	},
+		// },
 
-		// dentry resolver programs
-		{
-			ProgArrayName: "dentry_resolver_kprobe_progs",
-			Key:           DentryResolverKernKprobeKey,
-			ProbeIdentificationPair: manager.ProbeIdentificationPair{
-				EBPFFuncName: "kprobe_dentry_resolver_kern",
-			},
-		},
-		{
-			ProgArrayName: "dentry_resolver_tracepoint_progs",
-			Key:           DentryResolverKernTracepointKey,
-			ProbeIdentificationPair: manager.ProbeIdentificationPair{
-				EBPFFuncName: "tracepoint_dentry_resolver_kern",
-			},
-		},
+		// // dentry resolver programs
+		// {
+		// 	ProgArrayName: "dentry_resolver_kprobe_progs",
+		// 	Key:           DentryResolverKernKprobeKey,
+		// 	ProbeIdentificationPair: manager.ProbeIdentificationPair{
+		// 		EBPFFuncName: "kprobe_dentry_resolver_kern",
+		// 	},
+		// },
+		// {
+		// 	ProgArrayName: "dentry_resolver_tracepoint_progs",
+		// 	Key:           DentryResolverKernTracepointKey,
+		// 	ProbeIdentificationPair: manager.ProbeIdentificationPair{
+		// 		EBPFFuncName: "tracepoint_dentry_resolver_kern",
+		// 	},
+		// },
 
 		// dentry resolver kprobe callbacks
 		{
@@ -183,13 +183,13 @@ func getDentryResolverTailCallRoutes(ERPCDentryResolutionEnabled, supportMmapabl
 		}
 
 		routes = append(routes, []manager.TailCallRoute{
-			{
-				ProgArrayName: "dentry_resolver_kprobe_progs",
-				Key:           DentryResolverERPCKey,
-				ProbeIdentificationPair: manager.ProbeIdentificationPair{
-					EBPFFuncName: "kprobe_dentry_resolver_erpc" + ebpfSuffix,
-				},
-			},
+			// {
+			// 	ProgArrayName: "dentry_resolver_kprobe_progs",
+			// 	Key:           DentryResolverERPCKey,
+			// 	ProbeIdentificationPair: manager.ProbeIdentificationPair{
+			// 		EBPFFuncName: "kprobe_dentry_resolver_erpc" + ebpfSuffix,
+			// 	},
+			// },
 			{
 				ProgArrayName: "dentry_resolver_kprobe_progs",
 				Key:           DentryResolverParentERPCKey,
@@ -197,13 +197,13 @@ func getDentryResolverTailCallRoutes(ERPCDentryResolutionEnabled, supportMmapabl
 					EBPFFuncName: "kprobe_dentry_resolver_parent_erpc" + ebpfSuffix,
 				},
 			},
-			{
-				ProgArrayName: "dentry_resolver_kprobe_progs",
-				Key:           DentryResolverSegmentERPCKey,
-				ProbeIdentificationPair: manager.ProbeIdentificationPair{
-					EBPFFuncName: "kprobe_dentry_resolver_segment_erpc" + ebpfSuffix,
-				},
-			},
+			// {
+			// 	ProgArrayName: "dentry_resolver_kprobe_progs",
+			// 	Key:           DentryResolverSegmentERPCKey,
+			// 	ProbeIdentificationPair: manager.ProbeIdentificationPair{
+			// 		EBPFFuncName: "kprobe_dentry_resolver_segment_erpc" + ebpfSuffix,
+			// 	},
+			// },
 		}...)
 	}
 

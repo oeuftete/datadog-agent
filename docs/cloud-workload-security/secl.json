@@ -195,7 +195,7 @@
         {
           "name": "process.ancestors.file.inode",
           "definition": "Inode of the file",
-          "property_doc_link": "common-pathkey-inode-doc"
+          "property_doc_link": "common-dentrykey-inode-doc"
         },
         {
           "name": "process.ancestors.file.mode",
@@ -210,7 +210,7 @@
         {
           "name": "process.ancestors.file.mount_id",
           "definition": "Mount ID of the file",
-          "property_doc_link": "common-pathkey-mount_id-doc"
+          "property_doc_link": "common-dentrykey-mount_id-doc"
         },
         {
           "name": "process.ancestors.file.name",
@@ -320,7 +320,7 @@
         {
           "name": "process.ancestors.interpreter.file.inode",
           "definition": "Inode of the file",
-          "property_doc_link": "common-pathkey-inode-doc"
+          "property_doc_link": "common-dentrykey-inode-doc"
         },
         {
           "name": "process.ancestors.interpreter.file.mode",
@@ -335,7 +335,7 @@
         {
           "name": "process.ancestors.interpreter.file.mount_id",
           "definition": "Mount ID of the file",
-          "property_doc_link": "common-pathkey-mount_id-doc"
+          "property_doc_link": "common-dentrykey-mount_id-doc"
         },
         {
           "name": "process.ancestors.interpreter.file.name",
@@ -545,7 +545,7 @@
         {
           "name": "process.file.inode",
           "definition": "Inode of the file",
-          "property_doc_link": "common-pathkey-inode-doc"
+          "property_doc_link": "common-dentrykey-inode-doc"
         },
         {
           "name": "process.file.mode",
@@ -560,7 +560,7 @@
         {
           "name": "process.file.mount_id",
           "definition": "Mount ID of the file",
-          "property_doc_link": "common-pathkey-mount_id-doc"
+          "property_doc_link": "common-dentrykey-mount_id-doc"
         },
         {
           "name": "process.file.name",
@@ -670,7 +670,7 @@
         {
           "name": "process.interpreter.file.inode",
           "definition": "Inode of the file",
-          "property_doc_link": "common-pathkey-inode-doc"
+          "property_doc_link": "common-dentrykey-inode-doc"
         },
         {
           "name": "process.interpreter.file.mode",
@@ -685,7 +685,7 @@
         {
           "name": "process.interpreter.file.mount_id",
           "definition": "Mount ID of the file",
-          "property_doc_link": "common-pathkey-mount_id-doc"
+          "property_doc_link": "common-dentrykey-mount_id-doc"
         },
         {
           "name": "process.interpreter.file.name",
@@ -865,7 +865,7 @@
         {
           "name": "process.parent.file.inode",
           "definition": "Inode of the file",
-          "property_doc_link": "common-pathkey-inode-doc"
+          "property_doc_link": "common-dentrykey-inode-doc"
         },
         {
           "name": "process.parent.file.mode",
@@ -880,7 +880,7 @@
         {
           "name": "process.parent.file.mount_id",
           "definition": "Mount ID of the file",
-          "property_doc_link": "common-pathkey-mount_id-doc"
+          "property_doc_link": "common-dentrykey-mount_id-doc"
         },
         {
           "name": "process.parent.file.name",
@@ -990,7 +990,7 @@
         {
           "name": "process.parent.interpreter.file.inode",
           "definition": "Inode of the file",
-          "property_doc_link": "common-pathkey-inode-doc"
+          "property_doc_link": "common-dentrykey-inode-doc"
         },
         {
           "name": "process.parent.interpreter.file.mode",
@@ -1005,7 +1005,7 @@
         {
           "name": "process.parent.interpreter.file.mount_id",
           "definition": "Mount ID of the file",
-          "property_doc_link": "common-pathkey-mount_id-doc"
+          "property_doc_link": "common-dentrykey-mount_id-doc"
         },
         {
           "name": "process.parent.interpreter.file.name",
@@ -1276,7 +1276,7 @@
         {
           "name": "chmod.file.inode",
           "definition": "Inode of the file",
-          "property_doc_link": "common-pathkey-inode-doc"
+          "property_doc_link": "common-dentrykey-inode-doc"
         },
         {
           "name": "chmod.file.mode",
@@ -1291,7 +1291,7 @@
         {
           "name": "chmod.file.mount_id",
           "definition": "Mount ID of the file",
-          "property_doc_link": "common-pathkey-mount_id-doc"
+          "property_doc_link": "common-dentrykey-mount_id-doc"
         },
         {
           "name": "chmod.file.name",
@@ -1405,7 +1405,7 @@
         {
           "name": "chown.file.inode",
           "definition": "Inode of the file",
-          "property_doc_link": "common-pathkey-inode-doc"
+          "property_doc_link": "common-dentrykey-inode-doc"
         },
         {
           "name": "chown.file.mode",
@@ -1420,7 +1420,7 @@
         {
           "name": "chown.file.mount_id",
           "definition": "Mount ID of the file",
-          "property_doc_link": "common-pathkey-mount_id-doc"
+          "property_doc_link": "common-dentrykey-mount_id-doc"
         },
         {
           "name": "chown.file.name",
@@ -1648,7 +1648,7 @@
         {
           "name": "exec.file.inode",
           "definition": "Inode of the file",
-          "property_doc_link": "common-pathkey-inode-doc"
+          "property_doc_link": "common-dentrykey-inode-doc"
         },
         {
           "name": "exec.file.mode",
@@ -1663,7 +1663,7 @@
         {
           "name": "exec.file.mount_id",
           "definition": "Mount ID of the file",
-          "property_doc_link": "common-pathkey-mount_id-doc"
+          "property_doc_link": "common-dentrykey-mount_id-doc"
         },
         {
           "name": "exec.file.name",
@@ -1773,7 +1773,7 @@
         {
           "name": "exec.interpreter.file.inode",
           "definition": "Inode of the file",
-          "property_doc_link": "common-pathkey-inode-doc"
+          "property_doc_link": "common-dentrykey-inode-doc"
         },
         {
           "name": "exec.interpreter.file.mode",
@@ -1788,7 +1788,7 @@
         {
           "name": "exec.interpreter.file.mount_id",
           "definition": "Mount ID of the file",
-          "property_doc_link": "common-pathkey-mount_id-doc"
+          "property_doc_link": "common-dentrykey-mount_id-doc"
         },
         {
           "name": "exec.interpreter.file.name",
@@ -2017,7 +2017,7 @@
         {
           "name": "exit.file.inode",
           "definition": "Inode of the file",
-          "property_doc_link": "common-pathkey-inode-doc"
+          "property_doc_link": "common-dentrykey-inode-doc"
         },
         {
           "name": "exit.file.mode",
@@ -2032,7 +2032,7 @@
         {
           "name": "exit.file.mount_id",
           "definition": "Mount ID of the file",
-          "property_doc_link": "common-pathkey-mount_id-doc"
+          "property_doc_link": "common-dentrykey-mount_id-doc"
         },
         {
           "name": "exit.file.name",
@@ -2142,7 +2142,7 @@
         {
           "name": "exit.interpreter.file.inode",
           "definition": "Inode of the file",
-          "property_doc_link": "common-pathkey-inode-doc"
+          "property_doc_link": "common-dentrykey-inode-doc"
         },
         {
           "name": "exit.interpreter.file.mode",
@@ -2157,7 +2157,7 @@
         {
           "name": "exit.interpreter.file.mount_id",
           "definition": "Mount ID of the file",
-          "property_doc_link": "common-pathkey-mount_id-doc"
+          "property_doc_link": "common-dentrykey-mount_id-doc"
         },
         {
           "name": "exit.interpreter.file.name",
@@ -2291,7 +2291,7 @@
         {
           "name": "link.file.destination.inode",
           "definition": "Inode of the file",
-          "property_doc_link": "common-pathkey-inode-doc"
+          "property_doc_link": "common-dentrykey-inode-doc"
         },
         {
           "name": "link.file.destination.mode",
@@ -2306,7 +2306,7 @@
         {
           "name": "link.file.destination.mount_id",
           "definition": "Mount ID of the file",
-          "property_doc_link": "common-pathkey-mount_id-doc"
+          "property_doc_link": "common-dentrykey-mount_id-doc"
         },
         {
           "name": "link.file.destination.name",
@@ -2381,7 +2381,7 @@
         {
           "name": "link.file.inode",
           "definition": "Inode of the file",
-          "property_doc_link": "common-pathkey-inode-doc"
+          "property_doc_link": "common-dentrykey-inode-doc"
         },
         {
           "name": "link.file.mode",
@@ -2396,7 +2396,7 @@
         {
           "name": "link.file.mount_id",
           "definition": "Mount ID of the file",
-          "property_doc_link": "common-pathkey-mount_id-doc"
+          "property_doc_link": "common-dentrykey-mount_id-doc"
         },
         {
           "name": "link.file.name",
@@ -2505,7 +2505,7 @@
         {
           "name": "load_module.file.inode",
           "definition": "Inode of the file",
-          "property_doc_link": "common-pathkey-inode-doc"
+          "property_doc_link": "common-dentrykey-inode-doc"
         },
         {
           "name": "load_module.file.mode",
@@ -2520,7 +2520,7 @@
         {
           "name": "load_module.file.mount_id",
           "definition": "Mount ID of the file",
-          "property_doc_link": "common-pathkey-mount_id-doc"
+          "property_doc_link": "common-dentrykey-mount_id-doc"
         },
         {
           "name": "load_module.file.name",
@@ -2634,7 +2634,7 @@
         {
           "name": "mkdir.file.inode",
           "definition": "Inode of the file",
-          "property_doc_link": "common-pathkey-inode-doc"
+          "property_doc_link": "common-dentrykey-inode-doc"
         },
         {
           "name": "mkdir.file.mode",
@@ -2649,7 +2649,7 @@
         {
           "name": "mkdir.file.mount_id",
           "definition": "Mount ID of the file",
-          "property_doc_link": "common-pathkey-mount_id-doc"
+          "property_doc_link": "common-dentrykey-mount_id-doc"
         },
         {
           "name": "mkdir.file.name",
@@ -2743,7 +2743,7 @@
         {
           "name": "mmap.file.inode",
           "definition": "Inode of the file",
-          "property_doc_link": "common-pathkey-inode-doc"
+          "property_doc_link": "common-dentrykey-inode-doc"
         },
         {
           "name": "mmap.file.mode",
@@ -2758,7 +2758,7 @@
         {
           "name": "mmap.file.mount_id",
           "definition": "Mount ID of the file",
-          "property_doc_link": "common-pathkey-mount_id-doc"
+          "property_doc_link": "common-dentrykey-mount_id-doc"
         },
         {
           "name": "mmap.file.name",
@@ -2920,7 +2920,7 @@
         {
           "name": "open.file.inode",
           "definition": "Inode of the file",
-          "property_doc_link": "common-pathkey-inode-doc"
+          "property_doc_link": "common-dentrykey-inode-doc"
         },
         {
           "name": "open.file.mode",
@@ -2935,7 +2935,7 @@
         {
           "name": "open.file.mount_id",
           "definition": "Mount ID of the file",
-          "property_doc_link": "common-pathkey-mount_id-doc"
+          "property_doc_link": "common-dentrykey-mount_id-doc"
         },
         {
           "name": "open.file.name",
@@ -3134,7 +3134,7 @@
         {
           "name": "ptrace.tracee.ancestors.file.inode",
           "definition": "Inode of the file",
-          "property_doc_link": "common-pathkey-inode-doc"
+          "property_doc_link": "common-dentrykey-inode-doc"
         },
         {
           "name": "ptrace.tracee.ancestors.file.mode",
@@ -3149,7 +3149,7 @@
         {
           "name": "ptrace.tracee.ancestors.file.mount_id",
           "definition": "Mount ID of the file",
-          "property_doc_link": "common-pathkey-mount_id-doc"
+          "property_doc_link": "common-dentrykey-mount_id-doc"
         },
         {
           "name": "ptrace.tracee.ancestors.file.name",
@@ -3259,7 +3259,7 @@
         {
           "name": "ptrace.tracee.ancestors.interpreter.file.inode",
           "definition": "Inode of the file",
-          "property_doc_link": "common-pathkey-inode-doc"
+          "property_doc_link": "common-dentrykey-inode-doc"
         },
         {
           "name": "ptrace.tracee.ancestors.interpreter.file.mode",
@@ -3274,7 +3274,7 @@
         {
           "name": "ptrace.tracee.ancestors.interpreter.file.mount_id",
           "definition": "Mount ID of the file",
-          "property_doc_link": "common-pathkey-mount_id-doc"
+          "property_doc_link": "common-dentrykey-mount_id-doc"
         },
         {
           "name": "ptrace.tracee.ancestors.interpreter.file.name",
@@ -3484,7 +3484,7 @@
         {
           "name": "ptrace.tracee.file.inode",
           "definition": "Inode of the file",
-          "property_doc_link": "common-pathkey-inode-doc"
+          "property_doc_link": "common-dentrykey-inode-doc"
         },
         {
           "name": "ptrace.tracee.file.mode",
@@ -3499,7 +3499,7 @@
         {
           "name": "ptrace.tracee.file.mount_id",
           "definition": "Mount ID of the file",
-          "property_doc_link": "common-pathkey-mount_id-doc"
+          "property_doc_link": "common-dentrykey-mount_id-doc"
         },
         {
           "name": "ptrace.tracee.file.name",
@@ -3609,7 +3609,7 @@
         {
           "name": "ptrace.tracee.interpreter.file.inode",
           "definition": "Inode of the file",
-          "property_doc_link": "common-pathkey-inode-doc"
+          "property_doc_link": "common-dentrykey-inode-doc"
         },
         {
           "name": "ptrace.tracee.interpreter.file.mode",
@@ -3624,7 +3624,7 @@
         {
           "name": "ptrace.tracee.interpreter.file.mount_id",
           "definition": "Mount ID of the file",
-          "property_doc_link": "common-pathkey-mount_id-doc"
+          "property_doc_link": "common-dentrykey-mount_id-doc"
         },
         {
           "name": "ptrace.tracee.interpreter.file.name",
@@ -3804,7 +3804,7 @@
         {
           "name": "ptrace.tracee.parent.file.inode",
           "definition": "Inode of the file",
-          "property_doc_link": "common-pathkey-inode-doc"
+          "property_doc_link": "common-dentrykey-inode-doc"
         },
         {
           "name": "ptrace.tracee.parent.file.mode",
@@ -3819,7 +3819,7 @@
         {
           "name": "ptrace.tracee.parent.file.mount_id",
           "definition": "Mount ID of the file",
-          "property_doc_link": "common-pathkey-mount_id-doc"
+          "property_doc_link": "common-dentrykey-mount_id-doc"
         },
         {
           "name": "ptrace.tracee.parent.file.name",
@@ -3929,7 +3929,7 @@
         {
           "name": "ptrace.tracee.parent.interpreter.file.inode",
           "definition": "Inode of the file",
-          "property_doc_link": "common-pathkey-inode-doc"
+          "property_doc_link": "common-dentrykey-inode-doc"
         },
         {
           "name": "ptrace.tracee.parent.interpreter.file.mode",
@@ -3944,7 +3944,7 @@
         {
           "name": "ptrace.tracee.parent.interpreter.file.mount_id",
           "definition": "Mount ID of the file",
-          "property_doc_link": "common-pathkey-mount_id-doc"
+          "property_doc_link": "common-dentrykey-mount_id-doc"
         },
         {
           "name": "ptrace.tracee.parent.interpreter.file.name",
@@ -4113,7 +4113,7 @@
         {
           "name": "removexattr.file.inode",
           "definition": "Inode of the file",
-          "property_doc_link": "common-pathkey-inode-doc"
+          "property_doc_link": "common-dentrykey-inode-doc"
         },
         {
           "name": "removexattr.file.mode",
@@ -4128,7 +4128,7 @@
         {
           "name": "removexattr.file.mount_id",
           "definition": "Mount ID of the file",
-          "property_doc_link": "common-pathkey-mount_id-doc"
+          "property_doc_link": "common-dentrykey-mount_id-doc"
         },
         {
           "name": "removexattr.file.name",
@@ -4227,7 +4227,7 @@
         {
           "name": "rename.file.destination.inode",
           "definition": "Inode of the file",
-          "property_doc_link": "common-pathkey-inode-doc"
+          "property_doc_link": "common-dentrykey-inode-doc"
         },
         {
           "name": "rename.file.destination.mode",
@@ -4242,7 +4242,7 @@
         {
           "name": "rename.file.destination.mount_id",
           "definition": "Mount ID of the file",
-          "property_doc_link": "common-pathkey-mount_id-doc"
+          "property_doc_link": "common-dentrykey-mount_id-doc"
         },
         {
           "name": "rename.file.destination.name",
@@ -4317,7 +4317,7 @@
         {
           "name": "rename.file.inode",
           "definition": "Inode of the file",
-          "property_doc_link": "common-pathkey-inode-doc"
+          "property_doc_link": "common-dentrykey-inode-doc"
         },
         {
           "name": "rename.file.mode",
@@ -4332,7 +4332,7 @@
         {
           "name": "rename.file.mount_id",
           "definition": "Mount ID of the file",
-          "property_doc_link": "common-pathkey-mount_id-doc"
+          "property_doc_link": "common-dentrykey-mount_id-doc"
         },
         {
           "name": "rename.file.name",
@@ -4426,7 +4426,7 @@
         {
           "name": "rmdir.file.inode",
           "definition": "Inode of the file",
-          "property_doc_link": "common-pathkey-inode-doc"
+          "property_doc_link": "common-dentrykey-inode-doc"
         },
         {
           "name": "rmdir.file.mode",
@@ -4441,7 +4441,7 @@
         {
           "name": "rmdir.file.mount_id",
           "definition": "Mount ID of the file",
-          "property_doc_link": "common-pathkey-mount_id-doc"
+          "property_doc_link": "common-dentrykey-mount_id-doc"
         },
         {
           "name": "rmdir.file.name",
@@ -4652,7 +4652,7 @@
         {
           "name": "setxattr.file.inode",
           "definition": "Inode of the file",
-          "property_doc_link": "common-pathkey-inode-doc"
+          "property_doc_link": "common-dentrykey-inode-doc"
         },
         {
           "name": "setxattr.file.mode",
@@ -4667,7 +4667,7 @@
         {
           "name": "setxattr.file.mount_id",
           "definition": "Mount ID of the file",
-          "property_doc_link": "common-pathkey-mount_id-doc"
+          "property_doc_link": "common-dentrykey-mount_id-doc"
         },
         {
           "name": "setxattr.file.name",
@@ -4861,7 +4861,7 @@
         {
           "name": "signal.target.ancestors.file.inode",
           "definition": "Inode of the file",
-          "property_doc_link": "common-pathkey-inode-doc"
+          "property_doc_link": "common-dentrykey-inode-doc"
         },
         {
           "name": "signal.target.ancestors.file.mode",
@@ -4876,7 +4876,7 @@
         {
           "name": "signal.target.ancestors.file.mount_id",
           "definition": "Mount ID of the file",
-          "property_doc_link": "common-pathkey-mount_id-doc"
+          "property_doc_link": "common-dentrykey-mount_id-doc"
         },
         {
           "name": "signal.target.ancestors.file.name",
@@ -4986,7 +4986,7 @@
         {
           "name": "signal.target.ancestors.interpreter.file.inode",
           "definition": "Inode of the file",
-          "property_doc_link": "common-pathkey-inode-doc"
+          "property_doc_link": "common-dentrykey-inode-doc"
         },
         {
           "name": "signal.target.ancestors.interpreter.file.mode",
@@ -5001,7 +5001,7 @@
         {
           "name": "signal.target.ancestors.interpreter.file.mount_id",
           "definition": "Mount ID of the file",
-          "property_doc_link": "common-pathkey-mount_id-doc"
+          "property_doc_link": "common-dentrykey-mount_id-doc"
         },
         {
           "name": "signal.target.ancestors.interpreter.file.name",
@@ -5211,7 +5211,7 @@
         {
           "name": "signal.target.file.inode",
           "definition": "Inode of the file",
-          "property_doc_link": "common-pathkey-inode-doc"
+          "property_doc_link": "common-dentrykey-inode-doc"
         },
         {
           "name": "signal.target.file.mode",
@@ -5226,7 +5226,7 @@
         {
           "name": "signal.target.file.mount_id",
           "definition": "Mount ID of the file",
-          "property_doc_link": "common-pathkey-mount_id-doc"
+          "property_doc_link": "common-dentrykey-mount_id-doc"
         },
         {
           "name": "signal.target.file.name",
@@ -5336,7 +5336,7 @@
         {
           "name": "signal.target.interpreter.file.inode",
           "definition": "Inode of the file",
-          "property_doc_link": "common-pathkey-inode-doc"
+          "property_doc_link": "common-dentrykey-inode-doc"
         },
         {
           "name": "signal.target.interpreter.file.mode",
@@ -5351,7 +5351,7 @@
         {
           "name": "signal.target.interpreter.file.mount_id",
           "definition": "Mount ID of the file",
-          "property_doc_link": "common-pathkey-mount_id-doc"
+          "property_doc_link": "common-dentrykey-mount_id-doc"
         },
         {
           "name": "signal.target.interpreter.file.name",
@@ -5531,7 +5531,7 @@
         {
           "name": "signal.target.parent.file.inode",
           "definition": "Inode of the file",
-          "property_doc_link": "common-pathkey-inode-doc"
+          "property_doc_link": "common-dentrykey-inode-doc"
         },
         {
           "name": "signal.target.parent.file.mode",
@@ -5546,7 +5546,7 @@
         {
           "name": "signal.target.parent.file.mount_id",
           "definition": "Mount ID of the file",
-          "property_doc_link": "common-pathkey-mount_id-doc"
+          "property_doc_link": "common-dentrykey-mount_id-doc"
         },
         {
           "name": "signal.target.parent.file.name",
@@ -5656,7 +5656,7 @@
         {
           "name": "signal.target.parent.interpreter.file.inode",
           "definition": "Inode of the file",
-          "property_doc_link": "common-pathkey-inode-doc"
+          "property_doc_link": "common-dentrykey-inode-doc"
         },
         {
           "name": "signal.target.parent.interpreter.file.mode",
@@ -5671,7 +5671,7 @@
         {
           "name": "signal.target.parent.interpreter.file.mount_id",
           "definition": "Mount ID of the file",
-          "property_doc_link": "common-pathkey-mount_id-doc"
+          "property_doc_link": "common-dentrykey-mount_id-doc"
         },
         {
           "name": "signal.target.parent.interpreter.file.name",
@@ -5835,7 +5835,7 @@
         {
           "name": "splice.file.inode",
           "definition": "Inode of the file",
-          "property_doc_link": "common-pathkey-inode-doc"
+          "property_doc_link": "common-dentrykey-inode-doc"
         },
         {
           "name": "splice.file.mode",
@@ -5850,7 +5850,7 @@
         {
           "name": "splice.file.mount_id",
           "definition": "Mount ID of the file",
-          "property_doc_link": "common-pathkey-mount_id-doc"
+          "property_doc_link": "common-dentrykey-mount_id-doc"
         },
         {
           "name": "splice.file.name",
@@ -5954,7 +5954,7 @@
         {
           "name": "unlink.file.inode",
           "definition": "Inode of the file",
-          "property_doc_link": "common-pathkey-inode-doc"
+          "property_doc_link": "common-dentrykey-inode-doc"
         },
         {
           "name": "unlink.file.mode",
@@ -5969,7 +5969,7 @@
         {
           "name": "unlink.file.mount_id",
           "definition": "Mount ID of the file",
-          "property_doc_link": "common-pathkey-mount_id-doc"
+          "property_doc_link": "common-dentrykey-mount_id-doc"
         },
         {
           "name": "unlink.file.name",
@@ -6087,7 +6087,7 @@
         {
           "name": "utimes.file.inode",
           "definition": "Inode of the file",
-          "property_doc_link": "common-pathkey-inode-doc"
+          "property_doc_link": "common-dentrykey-inode-doc"
         },
         {
           "name": "utimes.file.mode",
@@ -6102,7 +6102,7 @@
         {
           "name": "utimes.file.mount_id",
           "definition": "Mount ID of the file",
-          "property_doc_link": "common-pathkey-mount_id-doc"
+          "property_doc_link": "common-dentrykey-mount_id-doc"
         },
         {
           "name": "utimes.file.name",
@@ -6988,7 +6988,7 @@
     },
     {
       "name": "*.inode",
-      "link": "common-pathkey-inode-doc",
+      "link": "common-dentrykey-inode-doc",
       "type": "int",
       "definition": "Inode of the file",
       "prefixes": [
@@ -7281,7 +7281,7 @@
     },
     {
       "name": "*.mount_id",
-      "link": "common-pathkey-mount_id-doc",
+      "link": "common-dentrykey-mount_id-doc",
       "type": "int",
       "definition": "Mount ID of the file",
       "prefixes": [

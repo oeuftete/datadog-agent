@@ -38,3 +38,12 @@ func (e *ErrPathResolution) Error() string {
 func (e *ErrPathResolution) Unwrap() error {
 	return e.Err
 }
+
+// ErrTruncatedPath is used to notify that a path was truncated
+type ErrTruncatedPath struct{}
+
+func (err ErrTruncatedPath) Error() string {
+	return "truncated_path"
+}
+
+var errTruncatedPath ErrTruncatedPath

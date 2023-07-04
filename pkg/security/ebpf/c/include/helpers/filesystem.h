@@ -97,15 +97,15 @@ static __attribute__((always_inline)) void umounted(struct pt_regs *ctx, u32 mou
 }
 
 void __attribute__((always_inline)) resolve_unshared_mnt(struct pt_regs *ctx, struct syscall_cache_t *syscall) {
-    syscall->unshare_mntns.mp_path_key.mount_id = get_mount_mount_id(syscall->unshare_mntns.parent);
-    syscall->unshare_mntns.mp_path_key.ino = get_dentry_ino(syscall->unshare_mntns.mp_dentry);
+    syscall->unshare_mntns.mp_dentry_key.mount_id = get_mount_mount_id(syscall->unshare_mntns.parent);
+    syscall->unshare_mntns.mp_dentry_key.ino = get_dentry_ino(syscall->unshare_mntns.mp_dentry);
 
     struct dentry *newmnt_dentry = get_vfsmount_dentry(get_mount_vfsmount(syscall->unshare_mntns.newmnt));
     struct super_block *sb = get_dentry_sb(newmnt_dentry);
     struct file_system_type *s_type = get_super_block_fs(sb);
     bpf_probe_read(&syscall->unshare_mntns.fstype, sizeof(syscall->unshare_mntns.fstype), &s_type->name);
 
-    syscall->resolver.key = syscall->unshare_mntns.mp_path_key;
+    syscall->resolver.key = syscall->unshare_mntns.mp_dentry_key;
     syscall->resolver.dentry = syscall->unshare_mntns.mp_dentry;
     syscall->resolver.discarder_type = 0;
     syscall->resolver.callback = PR_PROGKEY_CB_UNSHARE_MNTNS_KPROBE;
@@ -140,17 +140,17 @@ void __attribute__((always_inline)) fill_file_metadata(struct dentry* dentry, st
     bpf_probe_read(&file->mtime, sizeof(file->mtime), &d_inode->i_mtime);
 }
 
-#define get_dentry_key_path(dentry, path) (struct path_key_t) { .ino = get_dentry_ino(dentry), .mount_id = get_path_mount_id(path) }
-#define get_inode_key_path(inode, path) (struct path_key_t) { .ino = get_inode_ino(inode), .mount_id = get_path_mount_id(path) }
+#define get_dentry_key_path(dentry, path) (struct dentry_key_t) { .ino = get_dentry_ino(dentry), .mount_id = get_path_mount_id(path) }
+#define get_inode_key_path(inode, path) (struct dentry_key_t) { .ino = get_inode_ino(inode), .mount_id = get_path_mount_id(path) }
 
 static __attribute__((always_inline)) void set_file_inode(struct dentry *dentry, struct file_t *file, int invalidate) {
-    file->path_key.path_id = get_path_id(invalidate);
-    if (!file->path_key.ino) {
-        file->path_key.ino = get_dentry_ino(dentry);
+    file->dentry_key.path_id = get_path_id(invalidate);
+    if (!file->dentry_key.ino) {
+        file->dentry_key.ino = get_dentry_ino(dentry);
     }
 
     if (is_overlayfs(dentry)) {
-        set_overlayfs_ino(dentry, &file->path_key.ino, &file->flags);
+        set_overlayfs_ino(dentry, &file->dentry_key.ino, &file->flags);
     }
 }
 

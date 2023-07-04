@@ -52,11 +52,11 @@ func (ce *counterEntry) Tags() []string {
 type Resolver struct {
 	config                *config.Config
 	statsdClient          statsd.ClientInterface
-	pathnames             *lib.Map
+	dentries              *lib.Map
 	erpcStats             [2]*lib.Map
 	bufferSelector        *lib.Map
 	activeERPCStatsBuffer uint32
-	cache                 map[uint32]*lru.Cache[uint64, *PathEntry]
+	cache                 map[uint32]*lru.Cache[uint64, *DentryCacheEntry]
 	erpc                  *erpc.ERPC
 	erpcSegment           []byte
 	erpcSegmentSize       int
@@ -74,10 +74,15 @@ type Resolver struct {
 // ErrEntryNotFound is thrown when a path key was not found in the cache
 var ErrEntryNotFound = errors.New("entry not found")
 
-// PathEntry is the path structure saved in cache
-type PathEntry struct {
-	Parent model.PathKey
-	Name   string
+// // PathEntry is the path structure saved in cache
+// type PathEntry struct {
+// 	Parent model.PathKey
+// 	Name   string
+// 	PathID uint32
+// }
+
+type DentryCacheEntry struct {
+	Parent model.DentryKey
 	PathID uint32
 }
 
@@ -180,7 +185,7 @@ func (dr *Resolver) sendERPCStats() error {
 // DelCacheEntry removes an entry from the cache
 func (dr *Resolver) DelCacheEntry(mountID uint32, inode uint64) {
 	if entries, exists := dr.cache[mountID]; exists {
-		key := model.PathKey{Inode: inode}
+		key := model.DentryKey{Inode: inode}
 
 		// Delete path recursively
 		for {
@@ -207,7 +212,7 @@ func (dr *Resolver) DelCacheEntries(mountID uint32) {
 	delete(dr.cache, mountID)
 }
 
-func (dr *Resolver) lookupInodeFromCache(mountID uint32, inode uint64, pathID uint32) (*PathEntry, error) {
+func (dr *Resolver) lookupInodeFromCache(mountID uint32, inode uint64, pathID uint32) (*DentryCacheEntry, error) {
 	entries, exists := dr.cache[mountID]
 	if !exists {
 		return nil, ErrEntryNotFound
@@ -227,12 +232,12 @@ func (dr *Resolver) lookupInodeFromCache(mountID uint32, inode uint64, pathID ui
 
 // We need to cache inode by inode instead of caching the whole path in order to be
 // able to invalidate the whole path if one of its element got rename or removed.
-func (dr *Resolver) cacheInode(key model.PathKey, path *PathEntry) error {
+func (dr *Resolver) cacheInode(key model.DentryKey, path *DentryCacheEntry) error {
 	entries, exists := dr.cache[key.MountID]
 	if !exists {
 		var err error
 
-		entries, err = lru.NewWithEvict(dr.config.DentryCacheSize, func(_ uint64, value *PathEntry) {
+		entries, err = lru.NewWithEvict(dr.config.DentryCacheSize, func(_ uint64, value *DentryCacheEntry) {
 			dr.pathEntryPool.Put(value)
 		})
 		if err != nil {
@@ -251,126 +256,125 @@ func (dr *Resolver) cacheInode(key model.PathKey, path *PathEntry) error {
 	return nil
 }
 
-// ResolveNameFromCache returns the name
-func (dr *Resolver) ResolveNameFromCache(mountID uint32, inode uint64, pathID uint32) (string, error) {
-	entry := counterEntry{
-		resolutionType: metrics.CacheTag,
-		resolution:     metrics.SegmentResolutionTag,
-	}
+// // ResolveNameFromCache returns the name
+// func (dr *Resolver) ResolveNameFromCache(mountID uint32, inode uint64, pathID uint32) (string, error) {
+// 	entry := counterEntry{
+// 		resolutionType: metrics.CacheTag,
+// 		resolution:     metrics.SegmentResolutionTag,
+// 	}
 
-	path, err := dr.lookupInodeFromCache(mountID, inode, pathID)
-	if err != nil {
-		dr.missCounters[entry].Inc()
-		return "", err
-	}
+// 	path, err := dr.lookupInodeFromCache(mountID, inode, pathID)
+// 	if err != nil {
+// 		dr.missCounters[entry].Inc()
+// 		return "", err
+// 	}
 
-	dr.hitsCounters[entry].Inc()
-	return path.Name, nil
-}
+// 	dr.hitsCounters[entry].Inc()
+// 	return path.Name, nil
+// }
 
-func (dr *Resolver) lookupInodeFromMap(mountID uint32, inode uint64, pathID uint32) (model.PathLeaf, error) {
-	key := model.PathKey{MountID: mountID, Inode: inode, PathID: pathID}
-	var pathLeaf model.PathLeaf
-	if err := dr.pathnames.Lookup(key, &pathLeaf); err != nil {
+func (dr *Resolver) lookupInodeFromMap(mountID uint32, inode uint64, pathID uint32) (model.DentryLeaf, error) {
+	key := model.DentryKey{MountID: mountID, Inode: inode, PathID: pathID}
+	var pathLeaf model.DentryLeaf
+	if err := dr.dentries.Lookup(key, &pathLeaf); err != nil {
 		return pathLeaf, fmt.Errorf("unable to get filename for mountID `%d` and inode `%d`: %w", mountID, inode, err)
 	}
 	return pathLeaf, nil
 }
 
-func (dr *Resolver) getPathEntryFromPool(parent model.PathKey, name string, pathID uint32) *PathEntry {
-	entry := dr.pathEntryPool.Get().(*PathEntry)
+func (dr *Resolver) getPathEntryFromPool(parent model.DentryKey, name string, pathID uint32) *DentryCacheEntry {
+	entry := dr.pathEntryPool.Get().(*DentryCacheEntry)
 	entry.Parent = parent
-	entry.Name = name
 	entry.PathID = pathID
 
 	return entry
 }
 
-// ResolveNameFromMap resolves the name of the provided inode
-func (dr *Resolver) ResolveNameFromMap(mountID uint32, inode uint64, pathID uint32) (string, error) {
-	entry := counterEntry{
-		resolutionType: metrics.KernelMapsTag,
-		resolution:     metrics.SegmentResolutionTag,
-	}
+// // ResolveNameFromMap resolves the name of the provided inode
+// func (dr *Resolver) ResolveNameFromMap(mountID uint32, inode uint64, pathID uint32) (string, error) {
+// 	entry := counterEntry{
+// 		resolutionType: metrics.KernelMapsTag,
+// 		resolution:     metrics.SegmentResolutionTag,
+// 	}
 
-	pathLeaf, err := dr.lookupInodeFromMap(mountID, inode, pathID)
-	if err != nil {
-		dr.missCounters[entry].Inc()
-		return "", fmt.Errorf("unable to get filename for mountID `%d` and inode `%d`: %w", mountID, inode, err)
-	}
+// 	pathLeaf, err := dr.lookupInodeFromMap(mountID, inode, pathID)
+// 	if err != nil {
+// 		dr.missCounters[entry].Inc()
+// 		return "", fmt.Errorf("unable to get filename for mountID `%d` and inode `%d`: %w", mountID, inode, err)
+// 	}
 
-	dr.hitsCounters[entry].Inc()
+// 	dr.hitsCounters[entry].Inc()
 
-	name := pathLeaf.GetName()
+// 	name := pathLeaf.GetName()
 
-	if !IsFakeInode(inode) {
-		cacheKey := model.PathKey{MountID: mountID, Inode: inode, PathID: pathID}
-		cacheEntry := dr.getPathEntryFromPool(pathLeaf.Parent, name, pathID)
-		if err := dr.cacheInode(cacheKey, cacheEntry); err != nil {
-			dr.pathEntryPool.Put(cacheEntry)
-		}
-	}
+// 	if !IsFakeInode(inode) {
+// 		cacheKey := model.PathKey{MountID: mountID, Inode: inode, PathID: pathID}
+// 		cacheEntry := dr.getPathEntryFromPool(pathLeaf.Parent, name, pathID)
+// 		if err := dr.cacheInode(cacheKey, cacheEntry); err != nil {
+// 			dr.pathEntryPool.Put(cacheEntry)
+// 		}
+// 	}
 
-	return name, nil
-}
+// 	return name, nil
+// }
 
-// ResolveName resolves an inode/mount ID pair to a file basename
-func (dr *Resolver) ResolveName(mountID uint32, inode uint64, pathID uint32) string {
-	name, err := dr.ResolveNameFromCache(mountID, inode, pathID)
-	if err != nil && dr.config.ERPCDentryResolutionEnabled {
-		name, err = dr.ResolveNameFromERPC(mountID, inode, pathID)
-	}
-	if err != nil && dr.config.MapDentryResolutionEnabled {
-		name, err = dr.ResolveNameFromMap(mountID, inode, pathID)
-	}
+// // ResolveName resolves an inode/mount ID pair to a file basename
+// func (dr *Resolver) ResolveName(mountID uint32, inode uint64, pathID uint32) string {
+// 	name, err := dr.ResolveNameFromCache(mountID, inode, pathID)
+// 	if err != nil && dr.config.ERPCDentryResolutionEnabled {
+// 		name, err = dr.ResolveNameFromERPC(mountID, inode, pathID)
+// 	}
+// 	if err != nil && dr.config.MapDentryResolutionEnabled {
+// 		name, err = dr.ResolveNameFromMap(mountID, inode, pathID)
+// 	}
 
-	if err != nil {
-		name = ""
-	}
-	return name
-}
+// 	if err != nil {
+// 		name = ""
+// 	}
+// 	return name
+// }
 
 // ResolveFromCache resolves path from the cache
-func (dr *Resolver) ResolveFromCache(mountID uint32, inode uint64, pathID uint32) (string, error) {
-	var path *PathEntry
-	var err error
-	depth := int64(0)
-	key := model.PathKey{MountID: mountID, Inode: inode}
-	filenameParts := make([]string, 0, 128)
+// func (dr *Resolver) ResolveFromCache(mountID uint32, inode uint64, pathID uint32) (string, error) {
+// 	var path *PathEntry
+// 	var err error
+// 	depth := int64(0)
+// 	key := model.PathKey{MountID: mountID, Inode: inode}
+// 	filenameParts := make([]string, 0, 128)
 
-	entry := counterEntry{
-		resolutionType: metrics.CacheTag,
-		resolution:     metrics.PathResolutionTag,
-	}
+// 	entry := counterEntry{
+// 		resolutionType: metrics.CacheTag,
+// 		resolution:     metrics.PathResolutionTag,
+// 	}
 
-	// Fetch path recursively
-	for i := 0; i <= model.MaxPathDepth; i++ {
-		path, err = dr.lookupInodeFromCache(key.MountID, key.Inode, pathID)
-		if err != nil {
-			dr.missCounters[entry].Inc()
-			break
-		}
-		depth++
+// 	// Fetch path recursively
+// 	for i := 0; i <= model.MaxPathDepth; i++ {
+// 		path, err = dr.lookupInodeFromCache(key.MountID, key.Inode, pathID)
+// 		if err != nil {
+// 			dr.missCounters[entry].Inc()
+// 			break
+// 		}
+// 		depth++
 
-		// Don't append dentry name if this is the root dentry (i.d. name == '/')
-		if len(path.Name) != 0 && path.Name[0] != '\x00' && path.Name[0] != '/' {
-			filenameParts = append(filenameParts, path.Name)
-		}
+// 		// Don't append dentry name if this is the root dentry (i.d. name == '/')
+// 		if len(path.Name) != 0 && path.Name[0] != '\x00' && path.Name[0] != '/' {
+// 			filenameParts = append(filenameParts, path.Name)
+// 		}
 
-		if path.Parent.Inode == 0 {
-			break
-		}
+// 		if path.Parent.Inode == 0 {
+// 			break
+// 		}
 
-		// Prepare next key
-		key = path.Parent
-	}
+// 		// Prepare next key
+// 		key = path.Parent
+// 	}
 
-	if depth > 0 {
-		dr.hitsCounters[entry].Add(depth)
-	}
+// 	if depth > 0 {
+// 		dr.hitsCounters[entry].Add(depth)
+// 	}
 
-	return ComputeFilenameFromParts(filenameParts), err
-}
+// 	return ComputeFilenameFromParts(filenameParts), err
+// }
 
 func ComputeFilenameFromParts(parts []string) string {
 	if len(parts) == 0 {
@@ -394,96 +398,96 @@ func ComputeFilenameFromParts(parts []string) string {
 	return builder.String()
 }
 
-// ResolveFromMap resolves the path of the provided inode / mount id / path id
-func (dr *Resolver) ResolveFromMap(mountID uint32, inode uint64, pathID uint32, cache bool) (string, error) {
-	var cacheKey model.PathKey
-	var cacheEntry *PathEntry
-	var resolutionErr error
-	var name string
-	var pathLeaf model.PathLeaf
-	key := model.PathKey{MountID: mountID, Inode: inode, PathID: pathID}
+// // ResolveFromMap resolves the path of the provided inode / mount id / path id
+// func (dr *Resolver) ResolveFromMap(mountID uint32, inode uint64, pathID uint32, cache bool) (string, error) {
+// 	var cacheKey model.PathKey
+// 	var cacheEntry *PathEntry
+// 	var resolutionErr error
+// 	var name string
+// 	var pathLeaf model.PathLeaf
+// 	key := model.PathKey{MountID: mountID, Inode: inode, PathID: pathID}
 
-	keyBuffer, err := key.MarshalBinary()
-	if err != nil {
-		return "", err
-	}
+// 	keyBuffer, err := key.MarshalBinary()
+// 	if err != nil {
+// 		return "", err
+// 	}
 
-	depth := int64(0)
+// 	depth := int64(0)
 
-	var keys []model.PathKey
-	var entries []*PathEntry
+// 	var keys []model.PathKey
+// 	var entries []*PathEntry
 
-	filenameParts := make([]string, 0, 128)
+// 	filenameParts := make([]string, 0, 128)
 
-	// Fetch path recursively
-	for i := 0; i <= model.MaxPathDepth; i++ {
-		key.Write(keyBuffer)
-		if err := dr.pathnames.Lookup(keyBuffer, &pathLeaf); err != nil {
-			filenameParts = nil
-			resolutionErr = &ErrDentryPathKeyNotFound{PathKey: key}
-			break
-		}
-		depth++
+// 	// Fetch path recursively
+// 	for i := 0; i <= model.MaxPathDepth; i++ {
+// 		key.Write(keyBuffer)
+// 		if err := dr.dentries.Lookup(keyBuffer, &pathLeaf); err != nil {
+// 			filenameParts = nil
+// 			resolutionErr = &ErrDentryPathKeyNotFound{PathKey: key}
+// 			break
+// 		}
+// 		depth++
 
-		cacheKey = model.PathKey{MountID: key.MountID, Inode: key.Inode}
+// 		cacheKey = model.PathKey{MountID: key.MountID, Inode: key.Inode}
 
-		if pathLeaf.Name[0] == '\x00' {
-			if depth >= model.MaxPathDepth {
-				resolutionErr = errTruncatedParents
-			} else {
-				resolutionErr = errKernelMapResolution
-			}
-			break
-		}
+// 		if pathLeaf.Name[0] == '\x00' {
+// 			if depth >= model.MaxPathDepth {
+// 				resolutionErr = errTruncatedParents
+// 			} else {
+// 				resolutionErr = errKernelMapResolution
+// 			}
+// 			break
+// 		}
 
-		// Don't append dentry name if this is the root dentry (i.d. name == '/')
-		if pathLeaf.Name[0] == '/' {
-			name = "/"
-		} else {
-			name = model.NullTerminatedString(pathLeaf.Name[:])
-			filenameParts = append(filenameParts, name)
-		}
+// 		// Don't append dentry name if this is the root dentry (i.d. name == '/')
+// 		if pathLeaf.Name[0] == '/' {
+// 			name = "/"
+// 		} else {
+// 			name = model.NullTerminatedString(pathLeaf.Name[:])
+// 			filenameParts = append(filenameParts, name)
+// 		}
 
-		// do not cache fake path keys in the case of rename events
-		if !IsFakeInode(key.Inode) && cache {
-			cacheEntry = dr.getPathEntryFromPool(pathLeaf.Parent, name, pathID)
+// 		// do not cache fake path keys in the case of rename events
+// 		if !IsFakeInode(key.Inode) && cache {
+// 			cacheEntry = dr.getPathEntryFromPool(pathLeaf.Parent, name, pathID)
 
-			keys = append(keys, cacheKey)
-			entries = append(entries, cacheEntry)
-		}
+// 			keys = append(keys, cacheKey)
+// 			entries = append(entries, cacheEntry)
+// 		}
 
-		if pathLeaf.Parent.Inode == 0 {
-			break
-		}
+// 		if pathLeaf.Parent.Inode == 0 {
+// 			break
+// 		}
 
-		// Prepare next key
-		key = pathLeaf.Parent
-	}
+// 		// Prepare next key
+// 		key = pathLeaf.Parent
+// 	}
 
-	filename := ComputeFilenameFromParts(filenameParts)
+// 	filename := ComputeFilenameFromParts(filenameParts)
 
-	entry := counterEntry{
-		resolutionType: metrics.KernelMapsTag,
-		resolution:     metrics.PathResolutionTag,
-	}
+// 	entry := counterEntry{
+// 		resolutionType: metrics.KernelMapsTag,
+// 		resolution:     metrics.PathResolutionTag,
+// 	}
 
-	if resolutionErr == nil {
-		dr.cacheEntries(keys, entries)
+// 	if resolutionErr == nil {
+// 		dr.cacheEntries(keys, entries)
 
-		if depth > 0 {
-			dr.hitsCounters[entry].Add(depth)
-		}
-	} else {
-		// nothing inserted in cache, release everything
-		for _, entry := range entries {
-			dr.pathEntryPool.Put(entry)
-		}
+// 		if depth > 0 {
+// 			dr.hitsCounters[entry].Add(depth)
+// 		}
+// 	} else {
+// 		// nothing inserted in cache, release everything
+// 		for _, entry := range entries {
+// 			dr.pathEntryPool.Put(entry)
+// 		}
 
-		dr.missCounters[entry].Inc()
-	}
+// 		dr.missCounters[entry].Inc()
+// 	}
 
-	return filename, resolutionErr
-}
+// 	return filename, resolutionErr
+// }
 
 // preventSegmentMajorPageFault prepares the userspace memory area where the dentry resolver response is written. Used in kernel versions where BPF_F_MMAPABLE array maps are not yet available.
 func (dr *Resolver) preventSegmentMajorPageFault() {
@@ -514,36 +518,36 @@ func (dr *Resolver) requestResolve(op uint8, mountID uint32, inode uint64, pathI
 	return challenge, dr.erpc.Request(&dr.erpcRequest)
 }
 
-// ResolveNameFromERPC resolves the name of the provided inode / mount id / path id
-func (dr *Resolver) ResolveNameFromERPC(mountID uint32, inode uint64, pathID uint32) (string, error) {
-	entry := counterEntry{
-		resolutionType: metrics.ERPCTag,
-		resolution:     metrics.SegmentResolutionTag,
-	}
+// // ResolveNameFromERPC resolves the name of the provided inode / mount id / path id
+// func (dr *Resolver) ResolveNameFromERPC(mountID uint32, inode uint64, pathID uint32) (string, error) {
+// 	entry := counterEntry{
+// 		resolutionType: metrics.ERPCTag,
+// 		resolution:     metrics.SegmentResolutionTag,
+// 	}
 
-	challenge, err := dr.requestResolve(erpc.ResolveSegmentOp, mountID, inode, pathID)
-	if err != nil {
-		dr.missCounters[entry].Inc()
-		return "", fmt.Errorf("unable to get the name of mountID `%d` and inode `%d` with eRPC: %w", mountID, inode, err)
-	}
+// 	challenge, err := dr.requestResolve(erpc.ResolveSegmentOp, mountID, inode, pathID)
+// 	if err != nil {
+// 		dr.missCounters[entry].Inc()
+// 		return "", fmt.Errorf("unable to get the name of mountID `%d` and inode `%d` with eRPC: %w", mountID, inode, err)
+// 	}
 
-	if challenge != model.ByteOrder.Uint32(dr.erpcSegment[12:16]) {
-		dr.missCounters[entry].Inc()
-		return "", errERPCRequestNotProcessed
-	}
+// 	if challenge != model.ByteOrder.Uint32(dr.erpcSegment[12:16]) {
+// 		dr.missCounters[entry].Inc()
+// 		return "", errERPCRequestNotProcessed
+// 	}
 
-	seg := model.NullTerminatedString(dr.erpcSegment[16:])
-	if len(seg) == 0 || len(seg) > 0 && seg[0] == 0 {
-		dr.missCounters[entry].Inc()
-		return "", fmt.Errorf("couldn't resolve segment (len: %d)", len(seg))
-	}
+// 	seg := model.NullTerminatedString(dr.erpcSegment[16:])
+// 	if len(seg) == 0 || len(seg) > 0 && seg[0] == 0 {
+// 		dr.missCounters[entry].Inc()
+// 		return "", fmt.Errorf("couldn't resolve segment (len: %d)", len(seg))
+// 	}
 
-	dr.hitsCounters[entry].Inc()
-	return seg, nil
-}
+// 	dr.hitsCounters[entry].Inc()
+// 	return seg, nil
+// }
 
-func (dr *Resolver) cacheEntries(keys []model.PathKey, entries []*PathEntry) {
-	var cacheEntry *PathEntry
+func (dr *Resolver) cacheEntries(keys []model.DentryKey, entries []*DentryCacheEntry) {
+	var cacheEntry *DentryCacheEntry
 
 	for i, k := range keys {
 		if i >= len(entries) {
@@ -561,107 +565,107 @@ func (dr *Resolver) cacheEntries(keys []model.PathKey, entries []*PathEntry) {
 	}
 }
 
-// ResolveFromERPC resolves the path of the provided inode / mount id / path id
-func (dr *Resolver) ResolveFromERPC(mountID uint32, inode uint64, pathID uint32, cache bool) (string, error) {
-	var segment string
-	var resolutionErr error
-	depth := int64(0)
+// // ResolveFromERPC resolves the path of the provided inode / mount id / path id
+// func (dr *Resolver) ResolveFromERPC(mountID uint32, inode uint64, pathID uint32, cache bool) (string, error) {
+// 	var segment string
+// 	var resolutionErr error
+// 	depth := int64(0)
 
-	entry := counterEntry{
-		resolutionType: metrics.ERPCTag,
-		resolution:     metrics.PathResolutionTag,
-	}
+// 	entry := counterEntry{
+// 		resolutionType: metrics.ERPCTag,
+// 		resolution:     metrics.PathResolutionTag,
+// 	}
 
-	// create eRPC request and send using the ioctl syscall
-	challenge, err := dr.requestResolve(erpc.ResolvePathOp, mountID, inode, pathID)
-	if err != nil {
-		dr.missCounters[entry].Inc()
-		return "", fmt.Errorf("unable to resolve the path of mountID `%d` and inode `%d` with eRPC: %w", mountID, inode, err)
-	}
+// 	// create eRPC request and send using the ioctl syscall
+// 	challenge, err := dr.requestResolve(erpc.ResolvePathOp, mountID, inode, pathID)
+// 	if err != nil {
+// 		dr.missCounters[entry].Inc()
+// 		return "", fmt.Errorf("unable to resolve the path of mountID `%d` and inode `%d` with eRPC: %w", mountID, inode, err)
+// 	}
 
-	var keys []model.PathKey
-	var entries []*PathEntry
+// 	var keys []model.PathKey
+// 	var entries []*PathEntry
 
-	filenameParts := make([]string, 0, 128)
+// 	filenameParts := make([]string, 0, 128)
 
-	i := 0
-	// make sure that we keep room for at least one pathID + character + \0 => (sizeof(pathID) + 1 = 17)
-	for i < dr.erpcSegmentSize-17 {
-		depth++
+// 	i := 0
+// 	// make sure that we keep room for at least one pathID + character + \0 => (sizeof(pathID) + 1 = 17)
+// 	for i < dr.erpcSegmentSize-17 {
+// 		depth++
 
-		// parse the path_key_t structure
-		cacheKey := model.PathKey{
-			Inode:   model.ByteOrder.Uint64(dr.erpcSegment[i : i+8]),
-			MountID: model.ByteOrder.Uint32(dr.erpcSegment[i+8 : i+12]),
-		}
+// 		// parse the path_key_t structure
+// 		cacheKey := model.PathKey{
+// 			Inode:   model.ByteOrder.Uint64(dr.erpcSegment[i : i+8]),
+// 			MountID: model.ByteOrder.Uint32(dr.erpcSegment[i+8 : i+12]),
+// 		}
 
-		// check challenge
-		if challenge != model.ByteOrder.Uint32(dr.erpcSegment[i+12:i+16]) {
-			if depth >= model.MaxPathDepth {
-				resolutionErr = errTruncatedParentsERPC
-				break
-			}
-			dr.missCounters[entry].Inc()
-			return "", errERPCRequestNotProcessed
-		}
+// 		// check challenge
+// 		if challenge != model.ByteOrder.Uint32(dr.erpcSegment[i+12:i+16]) {
+// 			if depth >= model.MaxPathDepth {
+// 				resolutionErr = errTruncatedParentsERPC
+// 				break
+// 			}
+// 			dr.missCounters[entry].Inc()
+// 			return "", errERPCRequestNotProcessed
+// 		}
 
-		// skip PathID
-		i += 16
+// 		// skip PathID
+// 		i += 16
 
-		if dr.erpcSegment[i] == 0 {
-			if depth >= model.MaxPathDepth {
-				resolutionErr = errTruncatedParentsERPC
-			} else {
-				resolutionErr = errERPCResolution
-			}
-			break
-		}
+// 		if dr.erpcSegment[i] == 0 {
+// 			if depth >= model.MaxPathDepth {
+// 				resolutionErr = errTruncatedParentsERPC
+// 			} else {
+// 				resolutionErr = errERPCResolution
+// 			}
+// 			break
+// 		}
 
-		if dr.erpcSegment[i] != '/' {
-			segment = model.NullTerminatedString(dr.erpcSegment[i:])
-			filenameParts = append(filenameParts, segment)
-			i += len(segment) + 1
-		} else {
-			break
-		}
+// 		if dr.erpcSegment[i] != '/' {
+// 			segment = model.NullTerminatedString(dr.erpcSegment[i:])
+// 			filenameParts = append(filenameParts, segment)
+// 			i += len(segment) + 1
+// 		} else {
+// 			break
+// 		}
 
-		if !IsFakeInode(cacheKey.Inode) && cache {
-			keys = append(keys, cacheKey)
+// 		if !IsFakeInode(cacheKey.Inode) && cache {
+// 			keys = append(keys, cacheKey)
 
-			entry := dr.getPathEntryFromPool(model.PathKey{}, segment, pathID)
-			entries = append(entries, entry)
-		}
-	}
+// 			entry := dr.getPathEntryFromPool(model.PathKey{}, segment, pathID)
+// 			entries = append(entries, entry)
+// 		}
+// 	}
 
-	if resolutionErr == nil {
-		dr.cacheEntries(keys, entries)
+// 	if resolutionErr == nil {
+// 		dr.cacheEntries(keys, entries)
 
-		if depth > 0 {
-			dr.hitsCounters[entry].Add(depth)
-		}
-	} else {
-		dr.missCounters[entry].Inc()
-	}
+// 		if depth > 0 {
+// 			dr.hitsCounters[entry].Add(depth)
+// 		}
+// 	} else {
+// 		dr.missCounters[entry].Inc()
+// 	}
 
-	return ComputeFilenameFromParts(filenameParts), resolutionErr
-}
+// 	return ComputeFilenameFromParts(filenameParts), resolutionErr
+// }
 
 // Resolve the pathname of a dentry, starting at the pathnameKey in the pathnames table
-func (dr *Resolver) Resolve(mountID uint32, inode uint64, pathID uint32, cache bool) (string, error) {
-	var path string
-	var err = ErrEntryNotFound
+// func (dr *Resolver) Resolve(mountID uint32, inode uint64, pathID uint32, cache bool) (string, error) {
+// 	var path string
+// 	var err = ErrEntryNotFound
 
-	if cache {
-		path, err = dr.ResolveFromCache(mountID, inode, pathID)
-	}
-	if err != nil && dr.config.ERPCDentryResolutionEnabled {
-		path, err = dr.ResolveFromERPC(mountID, inode, pathID, cache)
-	}
-	if err != nil && err != errTruncatedParentsERPC && dr.config.MapDentryResolutionEnabled {
-		path, err = dr.ResolveFromMap(mountID, inode, pathID, cache)
-	}
-	return path, err
-}
+// 	if cache {
+// 		path, err = dr.ResolveFromCache(mountID, inode, pathID)
+// 	}
+// 	if err != nil && dr.config.ERPCDentryResolutionEnabled {
+// 		path, err = dr.ResolveFromERPC(mountID, inode, pathID, cache)
+// 	}
+// 	if err != nil && err != errTruncatedParentsERPC && dr.config.MapDentryResolutionEnabled {
+// 		path, err = dr.ResolveFromMap(mountID, inode, pathID, cache)
+// 	}
+// 	return path, err
+// }
 
 // ResolveParentFromCache resolves the parent
 func (dr *Resolver) ResolveParentFromCache(mountID uint32, inode uint64, pathID uint32) (uint32, uint64, error) {
@@ -729,7 +733,7 @@ func (dr *Resolver) GetParent(mountID uint32, inode uint64, pathID uint32) (uint
 	if err != nil && dr.config.ERPCDentryResolutionEnabled {
 		parentMountID, parentInode, err = dr.ResolveParentFromERPC(mountID, inode, pathID)
 	}
-	if err != nil && err != errTruncatedParentsERPC && dr.config.MapDentryResolutionEnabled {
+	if err != nil && dr.config.MapDentryResolutionEnabled {
 		parentMountID, parentInode, err = dr.ResolveParentFromMap(mountID, inode, pathID)
 	}
 
@@ -742,11 +746,11 @@ func (dr *Resolver) GetParent(mountID uint32, inode uint64, pathID uint32) (uint
 
 // Start the dentry resolver
 func (dr *Resolver) Start(manager *manager.Manager) error {
-	pathnames, err := managerhelper.Map(manager, "pathnames")
+	dentries, err := managerhelper.Map(manager, "dentries")
 	if err != nil {
 		return err
 	}
-	dr.pathnames = pathnames
+	dr.dentries = dentries
 
 	erpcStatsFB, err := managerhelper.Map(manager, "dr_erpc_stats_fb")
 	if err != nil {
@@ -829,13 +833,13 @@ func NewResolver(config *config.Config, statsdClient statsd.ClientInterface, e *
 
 	pathEntryPool := &sync.Pool{}
 	pathEntryPool.New = func() interface{} {
-		return &PathEntry{}
+		return &DentryCacheEntry{}
 	}
 
 	return &Resolver{
 		config:        config,
 		statsdClient:  statsdClient,
-		cache:         make(map[uint32]*lru.Cache[uint64, *PathEntry]),
+		cache:         make(map[uint32]*lru.Cache[uint64, *DentryCacheEntry]),
 		erpc:          e,
 		erpcRequest:   erpc.ERPCRequest{},
 		erpcStatsZero: make([]eRPCStats, numCPU),

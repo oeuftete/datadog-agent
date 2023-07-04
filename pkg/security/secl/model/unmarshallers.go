@@ -243,10 +243,10 @@ func (e *Process) UnmarshalBinary(data []byte) (int, error) {
 	read += n
 
 	// interpreter part
-	var pathKey PathKey
+	var dentryKey DentryKey
 	var pathRef PathRingBufferRef
 
-	n, err = pathKey.UnmarshalBinary(data[read:])
+	n, err = dentryKey.UnmarshalBinary(data[read:])
 	if err != nil {
 		return 0, err
 	}
@@ -259,8 +259,8 @@ func (e *Process) UnmarshalBinary(data []byte) (int, error) {
 	read += n
 
 	// TODO: Is there a better way to determine if there's no interpreter?
-	if e.FileEvent.Inode != pathKey.Inode || e.FileEvent.MountID != pathKey.MountID {
-		e.LinuxBinprm.FileEvent.PathKey = pathKey
+	if e.FileEvent.Inode != dentryKey.Inode || e.FileEvent.MountID != dentryKey.MountID {
+		e.LinuxBinprm.FileEvent.DentryKey = dentryKey
 		e.LinuxBinprm.FileEvent.PathRef = pathRef
 	}
 
@@ -332,7 +332,7 @@ func (e *ArgsEnvsEvent) UnmarshalBinary(data []byte) (int, error) {
 	return MaxArgEnvSize + 8, nil
 }
 
-func (p *PathKey) UnmarshalBinary(data []byte) (int, error) {
+func (p *DentryKey) UnmarshalBinary(data []byte) (int, error) {
 	if len(data) < 16 {
 		return 0, ErrNotEnoughData
 	}
@@ -362,7 +362,7 @@ func (e *FileFields) UnmarshalBinary(data []byte) (int, error) {
 		return 0, ErrNotEnoughData
 	}
 
-	n, err := e.PathKey.UnmarshalBinary(data)
+	n, err := e.DentryKey.UnmarshalBinary(data)
 	if err != nil {
 		return n, err
 	}

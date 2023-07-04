@@ -636,10 +636,10 @@ int __attribute__((always_inline)) send_exec_event(struct pt_regs *ctx) {
     struct proc_cache_t pc = {
         .entry = {
             .executable = {
-                .path_key = {
-                    .ino = syscall->exec.file.path_key.ino,
-                    .mount_id = syscall->exec.file.path_key.mount_id,
-                    .path_id = syscall->exec.file.path_key.path_id,
+                .dentry_key = {
+                    .ino = syscall->exec.file.dentry_key.ino,
+                    .mount_id = syscall->exec.file.dentry_key.mount_id,
+                    .path_id = syscall->exec.file.dentry_key.path_id,
                 },
                 .flags = syscall->exec.file.flags,
                 .path_ref = {

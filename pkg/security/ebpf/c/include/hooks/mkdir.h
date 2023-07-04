@@ -57,7 +57,7 @@ int kprobe_vfs_mkdir(struct pt_regs *ctx) {
         syscall->mkdir.dentry = (struct dentry *) PT_REGS_PARM3(ctx);
     }
 
-    syscall->mkdir.file.path_key.mount_id = get_path_mount_id(syscall->mkdir.path);
+    syscall->mkdir.file.dentry_key.mount_id = get_path_mount_id(syscall->mkdir.path);
 
     if (filter_syscall(syscall, mkdir_approvers)) {
         return discard_syscall(syscall);
@@ -79,7 +79,7 @@ int __attribute__((always_inline)) sys_mkdir_ret(void *ctx, int retval, int dr_t
     // the inode of the dentry was not properly set when kprobe/security_path_mkdir was called, make sure we grab it now
     set_file_inode(syscall->mkdir.dentry, &syscall->mkdir.file, 0);
 
-    syscall->resolver.key = syscall->mkdir.file.path_key;
+    syscall->resolver.key = syscall->mkdir.file.dentry_key;
     syscall->resolver.dentry = syscall->mkdir.dentry;
     syscall->resolver.discarder_type = syscall->policy.mode != NO_FILTER ? EVENT_MKDIR : 0;
     syscall->resolver.callback = PR_PROGKEY_CB_MKDIR;

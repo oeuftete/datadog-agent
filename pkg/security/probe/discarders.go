@@ -141,7 +141,7 @@ func newPidDiscarders(erpc *erpc.ERPC) *pidDiscarders {
 
 // InodeDiscarderMapEntry describes a map entry
 type InodeDiscarderMapEntry struct {
-	PathKey model.PathKey
+	PathKey model.DentryKey
 	IsLeaf  uint32
 	Padding uint32
 }
@@ -617,10 +617,10 @@ func dumpInodeDiscarders(resolver *dentry.Resolver, inodeMap *ebpf.Map) ([]Inode
 			MountID:              inodeEntry.PathKey.MountID,
 		}
 
-		path, err := resolver.Resolve(inodeEntry.PathKey.MountID, inodeEntry.PathKey.Inode, inodeEntry.PathKey.PathID, false)
-		if err == nil {
-			record.FilePath = path
-		}
+		// path, err := resolver.Resolve(inodeEntry.PathKey.MountID, inodeEntry.PathKey.Inode, inodeEntry.PathKey.PathID, false)
+		// if err == nil {
+		// 	record.FilePath = path
+		// }
 
 		dumps = append(dumps, record)
 

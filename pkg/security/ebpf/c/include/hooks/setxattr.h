@@ -75,7 +75,7 @@ int __attribute__((always_inline)) trace__vfs_setxattr(struct pt_regs *ctx, u64 
         return 0;
     }
 
-    if (syscall->xattr.file.path_key.ino) {
+    if (syscall->xattr.file.dentry_key.ino) {
         return 0;
     }
 
@@ -90,9 +90,9 @@ int __attribute__((always_inline)) trace__vfs_setxattr(struct pt_regs *ctx, u64 
 
     set_file_inode(syscall->xattr.dentry, &syscall->xattr.file, 0);
 
-    // the mount id of path_key is resolved by kprobe/mnt_want_write. It is already set by the time we reach this probe.
+    // the mount id of dentry_key is resolved by kprobe/mnt_want_write. It is already set by the time we reach this probe.
     syscall->resolver.dentry = syscall->xattr.dentry;
-    syscall->resolver.key = syscall->xattr.file.path_key;
+    syscall->resolver.key = syscall->xattr.file.dentry_key;
     syscall->resolver.discarder_type = syscall->policy.mode != NO_FILTER ? event_type : 0;
     syscall->resolver.callback = PR_PROGKEY_CB_SETXATTR;
     syscall->resolver.iteration = 0;

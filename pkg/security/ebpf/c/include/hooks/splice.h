@@ -35,7 +35,7 @@ int kprobe_get_pipe_info(struct pt_regs *ctx) {
         struct file *f = (struct file*) PT_REGS_PARM1(ctx);
         syscall->splice.dentry = get_file_dentry(f);
         set_file_inode(syscall->splice.dentry, &syscall->splice.file, 0);
-        syscall->splice.file.path_key.mount_id = get_file_mount_id(f);
+        syscall->splice.file.dentry_key.mount_id = get_file_mount_id(f);
     }
 
     return 0;
@@ -52,7 +52,7 @@ int kretprobe_get_pipe_info(struct pt_regs *ctx) {
     if (info == NULL) {
         // this is not a pipe, so most likely a file, resolve its path now
         syscall->splice.file_found = 1;
-        syscall->resolver.key = syscall->splice.file.path_key;
+        syscall->resolver.key = syscall->splice.file.dentry_key;
         syscall->resolver.dentry = syscall->splice.dentry;
         syscall->resolver.callback = DR_NO_CALLBACK;
         syscall->resolver.discarder_type = syscall->policy.mode != NO_FILTER ? EVENT_SPLICE : 0;

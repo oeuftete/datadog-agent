@@ -15,32 +15,42 @@ struct dentry_name {
     char name[PR_MAX_SEGMENT_LENGTH + 1];
 };
 
+void __attribute__((always_inline)) cleanup_ringbuf_ctx(struct pr_ring_buffer_ctx *ringbuf_ctx) {
+    ringbuf_ctx->hash = 0;
+    ringbuf_ctx->len = 0;
+    ringbuf_ctx->write_cursor = ringbuf_ctx->read_cursor;
+}
+
 int __attribute__((always_inline)) resolve_path_tail_call(void *ctx, struct dentry_resolver_input_t *input) {
     u32 zero = 0;
-    struct path_key_t key = input->key;
-    struct path_key_t next_key = input->key;
+    struct dentry_leaf_t map_value = {};
+    struct dentry_key_t key = input->key;
+    struct dentry_key_t next_key = input->key;
     struct qstr qstr;
     struct dentry *dentry = input->dentry;
     struct dentry *d_parent = NULL;
     struct dentry_name dname = {0};
 
-    if (key.ino == 0) {
-        return DENTRY_INVALID;
-    }
-
     struct pr_ring_buffer_ctx *ringbuf_ctx = bpf_map_lookup_elem(&pr_ringbuf_ctx, &zero);
     if (!ringbuf_ctx) {
         return DENTRY_ERROR;
+    }
+    
+    if (key.ino == 0) {
+        cleanup_ringbuf_ctx(ringbuf_ctx);
+        return DENTRY_INVALID;
     }
 
     u32 cpu = bpf_get_smp_processor_id();
     struct pr_ring_buffer *rb = bpf_map_lookup_elem(&pr_ringbufs, &cpu);
     if (!rb) {
+        cleanup_ringbuf_ctx(ringbuf_ctx);
         return DENTRY_ERROR;
     }
 
     struct is_discarded_by_inode_t *params = bpf_map_lookup_elem(&is_discarded_by_inode_gen, &zero);
     if (!params) {
+        cleanup_ringbuf_ctx(ringbuf_ctx);
         return DENTRY_ERROR;
     }
     *params = (struct is_discarded_by_inode_t){
@@ -63,14 +73,15 @@ int __attribute__((always_inline)) resolve_path_tail_call(void *ctx, struct dent
         }
 
         if (input->discarder_type && i <= 3) {
-            params->discarder.path_key.ino = key.ino;
-            params->discarder.path_key.mount_id = key.mount_id;
+            params->discarder.dentry_key.ino = key.ino;
+            params->discarder.dentry_key.mount_id = key.mount_id;
             params->discarder.is_leaf = i == 0;
 
             if (is_discarded_by_inode(params)) {
                 if (input->flags & ACTIVITY_DUMP_RUNNING) {
                     input->flags |= SAVED_BY_ACTIVITY_DUMP;
                 } else {
+                    cleanup_ringbuf_ctx(ringbuf_ctx);
                     return DENTRY_DISCARDED;
                 }
             }
@@ -79,6 +90,10 @@ int __attribute__((always_inline)) resolve_path_tail_call(void *ctx, struct dent
         bpf_probe_read(&qstr, sizeof(qstr), &dentry->d_name);
         long len = bpf_probe_read_str(&dname.name, sizeof(dname.name), (void *)qstr.name);
         if (dname.name[0] == 0) {
+            cleanup_ringbuf_ctx(ringbuf_ctx);
+            map_value.parent.ino = 0;
+            map_value.parent.mount_id = 0;
+            bpf_map_update_elem(&dentries, &key, &map_value, BPF_ANY);
             return DENTRY_ERROR;
         }
         len -= 1; // do not process trailing zero
@@ -93,6 +108,9 @@ int __attribute__((always_inline)) resolve_path_tail_call(void *ctx, struct dent
             // mark the path resolution as complete which will stop the tail calls
             input->key.ino = 0;
             ringbuf_ctx->write_cursor = write_cursor % PR_RING_BUFFER_SIZE;
+            map_value.parent.ino = 0;
+            map_value.parent.mount_id = 0;
+            bpf_map_update_elem(&dentries, &key, &map_value, BPF_ANY);
             return i + 1;
         }
 
@@ -109,10 +127,18 @@ int __attribute__((always_inline)) resolve_path_tail_call(void *ctx, struct dent
         rb->buffer[write_cursor++ % PR_RING_BUFFER_SIZE] = '/';
         ringbuf_ctx->len += len + 1;
 
+        map_value.parent = next_key;
+        bpf_map_update_elem(&dentries, &key, &map_value, BPF_ANY);
+
         dentry = d_parent;
     }
 
     if (input->iteration == PR_MAX_TAIL_CALL) {
+        cleanup_ringbuf_ctx(ringbuf_ctx);
+        ringbuf_ctx->len = ~0;
+        map_value.parent.mount_id = 0;
+        map_value.parent.ino = 0;
+        bpf_map_update_elem(&dentries, &next_key, &map_value, BPF_ANY);
         return DENTRY_ERROR;
     }
 

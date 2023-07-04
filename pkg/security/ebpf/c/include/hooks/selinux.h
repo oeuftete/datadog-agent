@@ -18,7 +18,7 @@ int __attribute__((always_inline)) handle_selinux_event(void *ctx, struct file *
 
     struct dentry *dentry = get_file_dentry(file);
     syscall.selinux.dentry = dentry;
-    syscall.selinux.file.path_key.mount_id = get_file_mount_id(file);
+    syscall.selinux.file.dentry_key.mount_id = get_file_mount_id(file);
 
     if (count < SELINUX_WRITE_BUFFER_LEN) {
         int value = parse_buf_to_bool(buf);
@@ -54,7 +54,7 @@ int __attribute__((always_inline)) handle_selinux_event(void *ctx, struct file *
     fill_file_metadata(syscall.selinux.dentry, &syscall.selinux.file.metadata);
     set_file_inode(syscall.selinux.dentry, &syscall.selinux.file, 0);
 
-    syscall.resolver.key = syscall.selinux.file.path_key;
+    syscall.resolver.key = syscall.selinux.file.dentry_key;
     syscall.resolver.dentry = syscall.selinux.dentry;
     syscall.resolver.discarder_type = syscall.policy.mode != NO_FILTER ? EVENT_SELINUX : 0;
     syscall.resolver.callback = PR_PROGKEY_CB_SELINUX;

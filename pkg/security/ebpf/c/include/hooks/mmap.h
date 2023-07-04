@@ -84,9 +84,9 @@ int kretprobe_fget(struct pt_regs *ctx) {
     struct file *f = (struct file*) PT_REGS_RC(ctx);
     syscall->mmap.dentry = get_file_dentry(f);
     set_file_inode(syscall->mmap.dentry, &syscall->mmap.file, 0);
-    syscall->mmap.file.path_key.mount_id = get_file_mount_id(f);
+    syscall->mmap.file.dentry_key.mount_id = get_file_mount_id(f);
 
-    syscall->resolver.key = syscall->mmap.file.path_key;
+    syscall->resolver.key = syscall->mmap.file.dentry_key;
     syscall->resolver.dentry = syscall->mmap.dentry;
     syscall->resolver.discarder_type = syscall->policy.mode != NO_FILTER ? EVENT_MMAP : 0;
     syscall->resolver.callback = DR_NO_CALLBACK;

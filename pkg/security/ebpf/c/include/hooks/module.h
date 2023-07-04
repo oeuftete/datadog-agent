@@ -39,9 +39,9 @@ int __attribute__((always_inline)) trace_kernel_file(struct pt_regs *ctx, struct
 
     syscall->init_module.dentry = get_file_dentry(f);
     set_file_inode(syscall->init_module.dentry, &syscall->init_module.file, 0);
-    syscall->init_module.file.path_key.mount_id = get_file_mount_id(f);
+    syscall->init_module.file.dentry_key.mount_id = get_file_mount_id(f);
 
-    syscall->resolver.key = syscall->init_module.file.path_key;
+    syscall->resolver.key = syscall->init_module.file.dentry_key;
     syscall->resolver.dentry = syscall->init_module.dentry;
     syscall->resolver.discarder_type = syscall->policy.mode != NO_FILTER ? EVENT_INIT_MODULE : 0;
     syscall->resolver.callback = DR_NO_CALLBACK;

@@ -18,6 +18,7 @@ var bpfMapNames = []string{
 	"cgroup_tracing_",
 	"cgroup_wait_lis",
 	"conntrack",
+	"dentries",
 	"discarders_revi",
 	"dns_event",
 	"dr_erpc_buffer",
