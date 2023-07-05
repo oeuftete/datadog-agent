@@ -68,7 +68,7 @@ type Resolver struct {
 	hitsCounters map[counterEntry]*atomic.Int64
 	missCounters map[counterEntry]*atomic.Int64
 
-	pathEntryPool *sync.Pool
+	dentryCacheEntryPool *sync.Pool
 }
 
 // ErrEntryNotFound is thrown when a path key was not found in the cache
@@ -182,30 +182,30 @@ func (dr *Resolver) sendERPCStats() error {
 	return dr.bufferSelector.Put(ebpf.BufferSelectorERPCMonitorKey, dr.activeERPCStatsBuffer)
 }
 
-// DelCacheEntry removes an entry from the cache
-func (dr *Resolver) DelCacheEntry(mountID uint32, inode uint64) {
-	if entries, exists := dr.cache[mountID]; exists {
-		key := model.DentryKey{Inode: inode}
+// // DelCacheEntry removes an entry from the cache
+// func (dr *Resolver) DelCacheEntry(mountID uint32, inode uint64) {
+// 	if entries, exists := dr.cache[mountID]; exists {
+// 		key := model.DentryKey{Inode: inode}
 
-		// Delete path recursively
-		for {
-			path, exists := entries.Get(key.Inode)
-			if !exists {
-				break
-			}
-			// this is also call the onEvict function of LRU thus releasing the entry from the pool
-			entries.Remove(key.Inode)
+// 		// Delete path recursively
+// 		for {
+// 			path, exists := entries.Get(key.Inode)
+// 			if !exists {
+// 				break
+// 			}
+// 			// this is also call the onEvict function of LRU thus releasing the entry from the pool
+// 			entries.Remove(key.Inode)
 
-			parent := path.Parent
-			if parent.Inode == 0 {
-				break
-			}
+// 			parent := path.Parent
+// 			if parent.Inode == 0 {
+// 				break
+// 			}
 
-			// Prepare next key
-			key = parent
-		}
-	}
-}
+// 			// Prepare next key
+// 			key = parent
+// 		}
+// 	}
+// }
 
 // DelCacheEntries removes all the entries belonging to a mountID
 func (dr *Resolver) DelCacheEntries(mountID uint32) {
@@ -232,13 +232,13 @@ func (dr *Resolver) lookupInodeFromCache(mountID uint32, inode uint64, pathID ui
 
 // We need to cache inode by inode instead of caching the whole path in order to be
 // able to invalidate the whole path if one of its element got rename or removed.
-func (dr *Resolver) cacheInode(key model.DentryKey, path *DentryCacheEntry) error {
+func (dr *Resolver) cacheInode(key model.DentryKey, dentry *DentryCacheEntry) error {
 	entries, exists := dr.cache[key.MountID]
 	if !exists {
 		var err error
 
 		entries, err = lru.NewWithEvict(dr.config.DentryCacheSize, func(_ uint64, value *DentryCacheEntry) {
-			dr.pathEntryPool.Put(value)
+			dr.dentryCacheEntryPool.Put(value)
 		})
 		if err != nil {
 			return err
@@ -248,10 +248,10 @@ func (dr *Resolver) cacheInode(key model.DentryKey, path *DentryCacheEntry) erro
 
 	// release before in case of override
 	if prev, exists := entries.Get(key.Inode); exists {
-		dr.pathEntryPool.Put(prev)
+		dr.dentryCacheEntryPool.Put(prev)
 	}
 
-	entries.Add(key.Inode, path)
+	entries.Add(key.Inode, dentry)
 
 	return nil
 }
@@ -282,8 +282,8 @@ func (dr *Resolver) lookupInodeFromMap(mountID uint32, inode uint64, pathID uint
 	return pathLeaf, nil
 }
 
-func (dr *Resolver) getPathEntryFromPool(parent model.DentryKey, name string, pathID uint32) *DentryCacheEntry {
-	entry := dr.pathEntryPool.Get().(*DentryCacheEntry)
+func (dr *Resolver) getPathEntryFromPool(parent model.DentryKey, pathID uint32) *DentryCacheEntry {
+	entry := dr.dentryCacheEntryPool.Get().(*DentryCacheEntry)
 	entry.Parent = parent
 	entry.PathID = pathID
 
@@ -546,24 +546,24 @@ func (dr *Resolver) requestResolve(op uint8, mountID uint32, inode uint64, pathI
 // 	return seg, nil
 // }
 
-func (dr *Resolver) cacheEntries(keys []model.DentryKey, entries []*DentryCacheEntry) {
-	var cacheEntry *DentryCacheEntry
+// func (dr *Resolver) cacheEntries(keys []model.DentryKey, entries []*DentryCacheEntry) {
+// 	var cacheEntry *DentryCacheEntry
 
-	for i, k := range keys {
-		if i >= len(entries) {
-			break
-		}
+// 	for i, k := range keys {
+// 		if i >= len(entries) {
+// 			break
+// 		}
 
-		cacheEntry = entries[i]
-		if len(keys) > i+1 {
-			cacheEntry.Parent = keys[i+1]
-		}
+// 		cacheEntry = entries[i]
+// 		if len(keys) > i+1 {
+// 			cacheEntry.Parent = keys[i+1]
+// 		}
 
-		if err := dr.cacheInode(k, cacheEntry); err != nil {
-			dr.pathEntryPool.Put(cacheEntry)
-		}
-	}
-}
+// 		if err := dr.cacheInode(k, cacheEntry); err != nil {
+// 			dr.pathEntryPool.Put(cacheEntry)
+// 		}
+// 	}
+// }
 
 // // ResolveFromERPC resolves the path of the provided inode / mount id / path id
 // func (dr *Resolver) ResolveFromERPC(mountID uint32, inode uint64, pathID uint32, cache bool) (string, error) {
@@ -730,11 +730,29 @@ func (dr *Resolver) ResolveParentFromMap(mountID uint32, inode uint64, pathID ui
 // GetParent returns the parent mount_id/inode
 func (dr *Resolver) GetParent(mountID uint32, inode uint64, pathID uint32) (uint32, uint64, error) {
 	parentMountID, parentInode, err := dr.ResolveParentFromCache(mountID, inode, pathID)
+
 	if err != nil && dr.config.ERPCDentryResolutionEnabled {
 		parentMountID, parentInode, err = dr.ResolveParentFromERPC(mountID, inode, pathID)
+		if err == nil && parentMountID != 0 && parentInode != 0 && !IsFakeInode(inode) {
+			key := model.DentryKey{MountID: mountID, Inode: inode, PathID: pathID}
+			parentKey := model.DentryKey{MountID: parentMountID, Inode: parentInode, PathID: pathID}
+			entry := dr.getPathEntryFromPool(parentKey, pathID)
+			if err := dr.cacheInode(key, entry); err != nil {
+				dr.dentryCacheEntryPool.Put(entry)
+			}
+		}
 	}
+
 	if err != nil && dr.config.MapDentryResolutionEnabled {
 		parentMountID, parentInode, err = dr.ResolveParentFromMap(mountID, inode, pathID)
+		if err == nil && parentMountID != 0 && parentInode != 0 && !IsFakeInode(inode) {
+			key := model.DentryKey{MountID: mountID, Inode: inode, PathID: pathID}
+			parentKey := model.DentryKey{MountID: parentMountID, Inode: parentInode, PathID: pathID}
+			entry := dr.getPathEntryFromPool(parentKey, pathID)
+			if err := dr.cacheInode(key, entry); err != nil {
+				dr.dentryCacheEntryPool.Put(entry)
+			}
+		}
 	}
 
 	if parentInode == 0 {
@@ -831,21 +849,21 @@ func NewResolver(config *config.Config, statsdClient statsd.ClientInterface, e *
 		return nil, fmt.Errorf("couldn't fetch the host CPU count: %w", err)
 	}
 
-	pathEntryPool := &sync.Pool{}
-	pathEntryPool.New = func() interface{} {
+	dentryCacheEntryPool := &sync.Pool{}
+	dentryCacheEntryPool.New = func() interface{} {
 		return &DentryCacheEntry{}
 	}
 
 	return &Resolver{
-		config:        config,
-		statsdClient:  statsdClient,
-		cache:         make(map[uint32]*lru.Cache[uint64, *DentryCacheEntry]),
-		erpc:          e,
-		erpcRequest:   erpc.ERPCRequest{},
-		erpcStatsZero: make([]eRPCStats, numCPU),
-		hitsCounters:  hitsCounters,
-		missCounters:  missCounters,
-		numCPU:        numCPU,
-		pathEntryPool: pathEntryPool,
+		config:               config,
+		statsdClient:         statsdClient,
+		cache:                make(map[uint32]*lru.Cache[uint64, *DentryCacheEntry]),
+		erpc:                 e,
+		erpcRequest:          erpc.ERPCRequest{},
+		erpcStatsZero:        make([]eRPCStats, numCPU),
+		hitsCounters:         hitsCounters,
+		missCounters:         missCounters,
+		numCPU:               numCPU,
+		dentryCacheEntryPool: dentryCacheEntryPool,
 	}, nil
 }
