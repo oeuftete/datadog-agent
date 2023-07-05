@@ -44,11 +44,23 @@ int __attribute__((always_inline)) trace_kernel_file(struct pt_regs *ctx, struct
     syscall->resolver.key = syscall->init_module.file.dentry_key;
     syscall->resolver.dentry = syscall->init_module.dentry;
     syscall->resolver.discarder_type = syscall->policy.mode != NO_FILTER ? EVENT_INIT_MODULE : 0;
-    syscall->resolver.callback = DR_NO_CALLBACK;
+    syscall->resolver.callback = PR_PROGKEY_CB_INITMODULE;
     syscall->resolver.iteration = 0;
     syscall->resolver.ret = 0;
 
     resolve_path(ctx, DR_KPROBE);
+    return 0;
+}
+
+SEC("kprobe/trace_kernel_file_cb")
+int kprobe_trace_kernel_file_cb(struct pt_regs *ctx) {
+    struct syscall_cache_t *syscall = peek_syscall(EVENT_INIT_MODULE);
+    if (!syscall) {
+        return 0;
+    }
+
+    fill_path_ring_buffer_ref(&syscall->init_module.file.path_ref);
+
     return 0;
 }
 
@@ -123,7 +135,6 @@ int __attribute__((always_inline)) trace_init_module_ret(void *ctx, int retval, 
 
     if (syscall->init_module.dentry != NULL) {
         fill_file_metadata(syscall->init_module.dentry, &event.file.metadata);
-        fill_path_ring_buffer_ref(&event.file.path_ref);
     }
 
     struct proc_cache_t *entry = fill_process_context(&event.process);
