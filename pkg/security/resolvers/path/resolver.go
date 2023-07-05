@@ -415,14 +415,14 @@ func (pr *PathRingsResolver) SendStats() error {
 			val := counter.Swap(0)
 			if val > 0 {
 				tags := []string{fmt.Sprintf("cause:%s", pathResolutionFailureCause(cause).String())}
-				pr.statsdClient.Count(metrics.MetricPathResolutionFailure, val, tags, 1.0)
+				_ = pr.statsdClient.Count(metrics.MetricPathResolutionFailure, val, tags, 1.0)
 			}
 		}
 	}
 
 	val := pr.successCounter.Swap(0)
 	if val > 0 {
-		pr.statsdClient.Count(metrics.MetricPathResolutionSuccess, val, []string{}, 1.0)
+		_ = pr.statsdClient.Count(metrics.MetricPathResolutionSuccess, val, []string{}, 1.0)
 	}
 
 	return nil
