@@ -55,6 +55,7 @@ func InspectNewProcessBinary(elfFile *elf.File, functions map[string]FunctionCon
 		return nil, fmt.Errorf("failed retrieving symbols: %+v", err)
 	}
 
+	return nil, nil
 	inspector := newProcessBinaryInspector{
 		elf: elfMetadata{
 			file: elfFile,

@@ -30,6 +30,7 @@ import (
 	"debug/elf"
 	"encoding/binary"
 	"errors"
+	"sync"
 )
 
 var (
@@ -65,10 +66,18 @@ func ReadElfBuildInfo(elfFile *elf.File) (vers, mod string, err error) {
 	return
 }
 
+var (
+	dataRawBuildPool = sync.Pool{
+		New: func() any {
+
+		},
+	}
+)
+
 // readRawBuildInfo extracts the Go toolchain version and module information
 // strings from a Go binary. On success, vers should be non-empty. mod
 // is empty if the binary was not built with modules enabled.
-func readRawBuildInfo(x exe) (vers, mod string, err error) {
+func readRawBuildInfo(x exe) (vers string, err error) {
 	// Read the first 64kB of dataAddr to find the build info blob.
 	// On some platforms, the blob will be in its own section, and DataStart
 	// returns the address of that section. On others, it's somewhere in the
@@ -77,7 +86,7 @@ func readRawBuildInfo(x exe) (vers, mod string, err error) {
 	dataAddr := x.DataStart()
 	data, err := x.ReadData(dataAddr, 64*1024)
 	if err != nil {
-		return "", "", err
+		return "", err
 	}
 	const (
 		buildInfoAlign = 16
@@ -86,7 +95,7 @@ func readRawBuildInfo(x exe) (vers, mod string, err error) {
 	for {
 		i := bytes.Index(data, buildInfoMagic)
 		if i < 0 || len(data)-i < buildInfoSize {
-			return "", "", ErrNotGoExe
+			return "", ErrNotGoExe
 		}
 		if i%buildInfoAlign == 0 && len(data)-i >= buildInfoSize {
 			data = data[i:]
