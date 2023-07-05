@@ -200,7 +200,7 @@ const (
 	outOfBounds
 	invalidCPU
 	hashMismatch
-	max
+	maxFailureCause
 )
 
 var pathResolutionFailureCauses = [...]string{
@@ -226,17 +226,24 @@ type PathRingsResolver struct {
 	fnv1a           hash.Hash64
 	numCPU          uint64
 	pathRings       []byte
-	failureCounters [max]atomic.Int64
-	successCounter  atomic.Int64
+	failureCounters [maxFailureCause]*atomic.Int64
+	successCounter  *atomic.Int64
 }
 
 // NewResolver returns a new path resolver
 func NewPathRingsResolver(mountResolver *mount.Resolver, statsdClient statsd.ClientInterface) *PathRingsResolver {
-	return &PathRingsResolver{
-		mountResolver: mountResolver,
-		statsdClient:  statsdClient,
-		fnv1a:         fnv.New64a(),
+	pr := &PathRingsResolver{
+		mountResolver:  mountResolver,
+		statsdClient:   statsdClient,
+		fnv1a:          fnv.New64a(),
+		successCounter: atomic.NewInt64(0),
 	}
+
+	for i := 0; i < int(maxFailureCause); i++ {
+		pr.failureCounters[i] = atomic.NewInt64(0)
+	}
+
+	return pr
 }
 
 func (pr *PathRingsResolver) resolvePath(ref *model.PathRingBufferRef) (string, error) {
@@ -411,12 +418,10 @@ func (pr *PathRingsResolver) Close() error {
 
 func (pr *PathRingsResolver) SendStats() error {
 	for cause, counter := range pr.failureCounters {
-		if cause > 0 {
-			val := counter.Swap(0)
-			if val > 0 {
-				tags := []string{fmt.Sprintf("cause:%s", pathResolutionFailureCause(cause).String())}
-				_ = pr.statsdClient.Count(metrics.MetricPathResolutionFailure, val, tags, 1.0)
-			}
+		val := counter.Swap(0)
+		if val > 0 {
+			tags := []string{fmt.Sprintf("cause:%s", pathResolutionFailureCause(cause).String())}
+			_ = pr.statsdClient.Count(metrics.MetricPathResolutionFailure, val, tags, 1.0)
 		}
 	}
 
