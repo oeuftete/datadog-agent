@@ -157,7 +157,10 @@ func getSymbolsUnified(f *elf.File, typ elf.SectionType, wantedSymbols common.St
 		}
 
 		stringEntry := int(f.ByteOrder.Uint32(symbolsCache[locationInCache : locationInCache+4]))
-
+		if stringEntry == 0 {
+			// symbol without a name.
+			continue
+		}
 		// Trying to get string representation of symbol.
 		// If the symbol name's length is not in the boundaries [minSymbolNameSize, maxSymbolNameSize+1] then we fail,
 		// and continue to the next symbol.

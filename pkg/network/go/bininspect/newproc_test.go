@@ -14,33 +14,36 @@ var functionsConfig = map[string]FunctionConfiguration{
 
 func TestInspectNewProcessBinary(t *testing.T) {
 	//elfFile, err := elf.Open("/proc/751528/exe")
-	elfFile, err := elf.Open("/proc/782923/exe")
+	elfFile, err := elf.Open("/proc/1812240/exe")
+	require.NoError(t, err)
+	_, err = InspectNewProcessBinary(elfFile, functionsConfig, nil)
 	require.NoError(t, err)
 	_, err = InspectNewProcessBinary(elfFile, functionsConfig, nil)
 	require.NoError(t, err)
 }
 
-//func BenchmarkInspectOldNotSupported(b *testing.B) {
-//	elfFile, err := elf.Open("/proc/751528/exe")
-//	require.NoError(b, err)
-//	b.ResetTimer()
-//	b.ReportAllocs()
+//	func BenchmarkInspectOldNotSupported(b *testing.B) {
+//		elfFile, err := elf.Open("/proc/751528/exe")
+//		require.NoError(b, err)
+//		b.ResetTimer()
+//		b.ReportAllocs()
 //
-//	for i := 0; i < b.N; i++ {
-//		InspectNewProcessBinary(elfFile, nil, nil)
+//		for i := 0; i < b.N; i++ {
+//			InspectNewProcessBinary(elfFile, nil, nil)
+//		}
 //	}
-//}
-//
-//func BenchmarkInspectNewNotSupported(b *testing.B) {
-//	elfFile, err := elf.Open("/proc/751528/exe")
-//	require.NoError(b, err)
-//	b.ResetTimer()
-//	b.ReportAllocs()
-//
-//	for i := 0; i < b.N; i++ {
-//		InspectNewProcessBinaryNew(elfFile, nil, nil)
-//	}
-//}
+func BenchmarkInspectNewNotSupported(b *testing.B) {
+	elfFile, err := elf.Open("/proc/1811310/exe")
+	require.NoError(b, err)
+	b.ResetTimer()
+	b.ReportAllocs()
+
+	for i := 0; i < b.N; i++ {
+		_, err := InspectNewProcessBinary(elfFile, functionsConfig, nil)
+		require.Error(b, err)
+	}
+}
+
 //
 //func BenchmarkInspectOldSupported(b *testing.B) {
 //	elfFile, err := elf.Open("/proc/782923/exe")
@@ -54,13 +57,14 @@ func TestInspectNewProcessBinary(t *testing.T) {
 //}
 
 func BenchmarkInspectNewSupported(b *testing.B) {
-	elfFile, err := elf.Open("/proc/782923/exe")
+	elfFile, err := elf.Open("/proc/1812240/exe")
 	require.NoError(b, err)
 	b.ResetTimer()
 	b.ReportAllocs()
 
 	for i := 0; i < b.N; i++ {
-		InspectNewProcessBinary(elfFile, functionsConfig, nil)
+		_, err := InspectNewProcessBinary(elfFile, functionsConfig, nil)
+		require.NoError(b, err)
 	}
 }
 

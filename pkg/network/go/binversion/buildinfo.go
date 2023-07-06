@@ -61,15 +61,19 @@ type exe interface {
 }
 
 // ReadElfBuildInfo finds and returns the Go version in the given ELF binary.
-func ReadElfBuildInfo(elfFile *elf.File) (vers, mod string, err error) {
-	vers, mod, err = readRawBuildInfo(&elfExe{f: elfFile})
+func ReadElfBuildInfo(elfFile *elf.File) (vers string, err error) {
+	vers, err = readRawBuildInfo(&elfExe{f: elfFile})
 	return
 }
+
+const (
+	defaultSize = 64 * 1024
+)
 
 var (
 	dataRawBuildPool = sync.Pool{
 		New: func() any {
-
+			return make([]byte, defaultSize)
 		},
 	}
 )
@@ -88,6 +92,16 @@ func readRawBuildInfo(x exe) (vers string, err error) {
 	if err != nil {
 		return "", err
 	}
+
+	defer func() {
+		// Zeroing the array. We cannot simply do data = data[:0], as this method changes the len to 0, which messes
+		// with ReadAt.
+		for i := range data {
+			data[i] = 0
+		}
+		dataRawBuildPool.Put(data)
+	}()
+
 	const (
 		buildInfoAlign = 16
 		buildInfoSize  = 32
@@ -117,7 +131,6 @@ func readRawBuildInfo(x exe) (vers string, err error) {
 	ptrSize := int(data[14])
 	if data[15]&2 != 0 {
 		vers, data = decodeString(data[32:])
-		mod, _ = decodeString(data)
 	} else {
 		bigEndian := data[15] != 0
 		var bo binary.ByteOrder
@@ -133,20 +146,12 @@ func readRawBuildInfo(x exe) (vers string, err error) {
 			readPtr = bo.Uint64
 		}
 		vers = readString(x, ptrSize, readPtr, readPtr(data[16:]))
-		mod = readString(x, ptrSize, readPtr, readPtr(data[16+ptrSize:]))
 	}
 	if vers == "" {
-		return "", "", ErrNotGoExe
-	}
-	if len(mod) >= 33 && mod[len(mod)-17] == '\n' {
-		// Strip module framing: sentinel strings delimiting the module info.
-		// These are cmd/go/internal/modload.infoStart and infoEnd.
-		mod = mod[16 : len(mod)-16]
-	} else {
-		mod = ""
+		return "", ErrNotGoExe
 	}
 
-	return vers, mod, nil
+	return vers, nil
 }
 
 func decodeString(data []byte) (s string, rest []byte) {
@@ -184,7 +189,13 @@ func (x *elfExe) ReadData(addr, size uint64) ([]byte, error) {
 			if n > size {
 				n = size
 			}
-			data := make([]byte, n)
+			var data []byte
+			if n == defaultSize {
+				data = dataRawBuildPool.Get().([]byte)
+			} else {
+				data = make([]byte, n)
+			}
+
 			_, err := prog.ReadAt(data, int64(addr-prog.Vaddr))
 			if err != nil {
 				return nil, err
