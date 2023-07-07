@@ -26,7 +26,7 @@ import (
 // preAllocatedBuf is a pre allocated buffer with a constant length (== max length among all given symbols) to spare
 // redundant allocations. We get it as a parameter and not putting it as a global, to be thread safe among concurrent
 // and parallel calls.
-func getSymbolNameByEntry(sectionReader io.ReaderAt, startPos, minLength int, preAllocatedBuf, symbolsNameCache []byte) int {
+func getSymbolNameByEntry(sectionReader io.ReaderAt, startPos, minLength int, preAllocatedBuf []byte) int {
 	_, err := sectionReader.ReadAt(preAllocatedBuf, int64(startPos))
 	if err != nil {
 		return -1
@@ -133,7 +133,7 @@ func getSymbolsUnified(f *elf.File, typ elf.SectionType, wantedSymbols common.St
 	// The size of the buffer is maxSymbolNameSize + 1, for null termination.
 	symbolNameBuf := make([]byte, maxSymbolNameSize+1)
 
-	const symbolChunkSize = int64(48)
+	const symbolChunkSize = int64(100)
 
 	chunkSize := symbolChunkSize * int64(symbolSize)
 
@@ -165,7 +165,7 @@ func getSymbolsUnified(f *elf.File, typ elf.SectionType, wantedSymbols common.St
 		// Trying to get string representation of symbol.
 		// If the symbol name's length is not in the boundaries [minSymbolNameSize, maxSymbolNameSize+1] then we fail,
 		// and continue to the next symbol.
-		symbolNameSize := getSymbolNameByEntry(f.Sections[symbolSection.Link].ReaderAt, stringEntry, minSymbolNameSize, symbolNameBuf, nil)
+		symbolNameSize := getSymbolNameByEntry(f.Sections[symbolSection.Link].ReaderAt, stringEntry, minSymbolNameSize, symbolNameBuf)
 
 		if symbolNameSize <= 0 {
 			continue
