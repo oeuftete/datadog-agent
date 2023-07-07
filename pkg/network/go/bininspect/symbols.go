@@ -166,7 +166,6 @@ func getSymbolsUnified(f *elf.File, typ elf.SectionType, wantedSymbols common.St
 		// If the symbol name's length is not in the boundaries [minSymbolNameSize, maxSymbolNameSize+1] then we fail,
 		// and continue to the next symbol.
 		symbolNameSize := getSymbolNameByEntry(f.Sections[symbolSection.Link].ReaderAt, stringEntry, minSymbolNameSize, symbolNameBuf, nil)
-		//fmt.Println(string(symbolNameBuf), stringEntry)
 
 		if symbolNameSize <= 0 {
 			continue
