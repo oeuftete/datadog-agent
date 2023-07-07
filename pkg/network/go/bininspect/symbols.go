@@ -72,15 +72,6 @@ func getSymbolLengthBoundaries(set common.StringSet) (int, int) {
 	return minSymbolName, maxSymbolName
 }
 
-// readSymbolEntryInStringTable reads the first 4 bytes from the symbol section current location, which represents the
-// symbol name entry in the string data section. Returns error in case of failure in reading the symbol entry.
-func readSymbolEntryInStringTable(symbolSectionReader io.ReaderAt, byteOrder binary.ByteOrder, readLocation int64, allocatedBufferForRead []byte) (int, error) {
-	if _, err := symbolSectionReader.ReadAt(allocatedBufferForRead, readLocation); err != nil {
-		return 0, err
-	}
-	return int(byteOrder.Uint32(allocatedBufferForRead)), nil
-}
-
 // fillSymbol reads the symbol entry from the symbol section with the first 4 bytes of the name entry (which
 // we read using readSymbolEntryInStringTable).
 func fillSymbol(symbol *elf.Symbol, byteOrder binary.ByteOrder, symbolName string, allocatedBufferForRead []byte, is64Bit bool) {
