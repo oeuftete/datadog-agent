@@ -25,27 +25,23 @@ func (pc *ProcessCacheEntry) SetSpan(spanID uint64, traceID uint64) {
 
 // SetAncestor sets the ancestor
 func (pc *ProcessCacheEntry) SetAncestor(parent *ProcessCacheEntry) {
-	if pc.Ancestor == parent {
+	if pc.Ancestor == &parent.ProcessContext {
 		return
 	}
 
-	if pc.Ancestor != nil {
-		pc.Ancestor.Release()
-	}
-
-	pc.Ancestor = parent
+	pc.Ancestor = &parent.ProcessContext
 	pc.Parent = &parent.Process
 	pc.IsThread = false
 	parent.Retain()
 }
 
 // HasCompleteLineage returns false if, from the entry, we cannot ascend the ancestors list to PID 1
-func (pc *ProcessCacheEntry) HasCompleteLineage() bool {
-	for pc != nil {
-		if pc.Pid == 1 {
+func (p *ProcessContext) HasCompleteLineage() bool {
+	for p != nil {
+		if p.Pid == 1 {
 			return true
 		}
-		pc = pc.Ancestor
+		p = p.Ancestor
 	}
 	return false
 }

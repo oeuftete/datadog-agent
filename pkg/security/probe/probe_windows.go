@@ -165,7 +165,3 @@ func NewProbe(config *config.Config, opts Opts) (*Probe, error) {
 
 	return p, nil
 }
-
-// Does nothing if on windows
-func (p *Probe) PlaySnapshot() {
-}

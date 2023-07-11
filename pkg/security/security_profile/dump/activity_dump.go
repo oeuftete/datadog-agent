@@ -332,7 +332,7 @@ func (ad *ActivityDump) containerIDMatches(containerID string) bool {
 }
 
 // MatchesSelector returns true if the provided list of tags and / or the provided comm match the current ActivityDump
-func (ad *ActivityDump) MatchesSelector(entry *model.ProcessCacheEntry) bool {
+func (ad *ActivityDump) MatchesSelector(entry *model.ProcessContext) bool {
 	if entry == nil {
 		return false
 	}
@@ -360,7 +360,7 @@ func (ad *ActivityDump) IsEventTypeValid(event model.EventType) bool {
 // NewProcessNodeCallback is a callback function used to propagate the fact that a new process node was added to the
 // activity tree
 func (ad *ActivityDump) NewProcessNodeCallback(p *activity_tree.ProcessNode) {
-	// set the pid of the input ProcessCacheEntry as traced
+	// set the pid of the input ProcessContext as traced
 	ad.updateTracedPid(p.Process.Pid)
 }
 

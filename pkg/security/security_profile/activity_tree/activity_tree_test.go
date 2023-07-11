@@ -72,7 +72,7 @@ func TestInsertFileEvent(t *testing.T) {
 func TestActivityTree_InsertExecEvent(t *testing.T) {
 	for _, tt := range activityTreeInsertExecEventTestCases {
 		t.Run(tt.name, func(t *testing.T) {
-			node, newEntry, err := tt.tree.CreateProcessNode(tt.inputEvent.ProcessCacheEntry, nil, Runtime, false, nil)
+			node, newEntry, err := tt.tree.CreateProcessNode(tt.inputEvent.ProcessContext, nil, Runtime, false, nil)
 			if tt.wantErr != nil {
 				if !tt.wantErr(t, err, fmt.Sprintf("unexpected error: %v", err)) {
 					return
@@ -100,7 +100,7 @@ func TestActivityTree_InsertExecEvent(t *testing.T) {
 // activityTreeInsertTestValidator is a mock validator to test the activity tree insert feature
 type activityTreeInsertTestValidator struct{}
 
-func (a activityTreeInsertTestValidator) MatchesSelector(entry *model.ProcessCacheEntry) bool {
+func (a activityTreeInsertTestValidator) MatchesSelector(entry *model.ProcessContext) bool {
 	return entry.ContainerID == "123"
 }
 
@@ -114,7 +114,7 @@ func (a activityTreeInsertTestValidator) NewProcessNodeCallback(p *ProcessNode) 
 // A final `systemd` node is appended.
 func newExecTestEventWithAncestors(lineage []model.Process) *model.Event {
 	// build the list of ancestors
-	ancestor := new(model.ProcessCacheEntry)
+	ancestor := new(model.ProcessContext)
 	lineageDup := make([]model.Process, len(lineage))
 	copy(lineageDup, lineage)
 
@@ -126,7 +126,7 @@ func newExecTestEventWithAncestors(lineage []model.Process) *model.Event {
 	cursor := ancestor
 	for _, p := range lineageDup[1:] {
 		cursor.Process = p
-		cursor.Ancestor = new(model.ProcessCacheEntry)
+		cursor.Ancestor = new(model.ProcessContext)
 		cursor = cursor.Ancestor
 	}
 
@@ -149,15 +149,12 @@ func newExecTestEventWithAncestors(lineage []model.Process) *model.Event {
 		Type:             uint32(model.ExecEventType),
 		FieldHandlers:    &model.DefaultFieldHandlers{},
 		ContainerContext: &model.ContainerContext{},
-		ProcessContext:   &model.ProcessContext{},
 		Exec: model.ExecEvent{
 			Process: &model.Process{},
 		},
-		ProcessCacheEntry: &model.ProcessCacheEntry{
-			ProcessContext: model.ProcessContext{
-				Process:  lineageDup[0],
-				Ancestor: ancestor,
-			},
+		ProcessContext: &model.ProcessContext{
+			Process:  lineageDup[0],
+			Ancestor: ancestor,
 		},
 	}
 	return evt

@@ -300,7 +300,7 @@ type Event struct {
 	Bind BindEvent `field:"bind" event:"bind" platform:"linux"` // [7.37] [Network] [Experimental] A bind was executed
 
 	// internal usage
-	ProcessCacheEntry *ProcessCacheEntry    `field:"-" json:"-" platform:"linux"`
+	ProcessCacheEntry *ProcessCacheEntry    `field:"-" json:"-" platform:"linux"` // TODO: remove
 	Umount            UmountEvent           `field:"-" json:"-" platform:"linux"`
 	InvalidateDentry  InvalidateDentryEvent `field:"-" json:"-" platform:"linux"`
 	ArgsEnvs          ArgsEnvsEvent         `field:"-" json:"-" platform:"linux"`
@@ -956,7 +956,7 @@ func ProcessSourceToString(source uint64) string {
 }
 
 // IsExecChild returns whether the current entry was execed directly from its parent (no fork)
-func (pc *ProcessCacheEntry) IsExecChild() bool {
+func (pc *ProcessContext) IsExecChild() bool {
 	return pc.Ancestor != nil && !pc.ExecTime.IsZero() && pc.ExecTime.Equal(pc.Ancestor.ExitTime)
 }
 
@@ -1011,7 +1011,7 @@ func NewProcessCacheEntry(onRelease func(_ *ProcessCacheEntry)) *ProcessCacheEnt
 
 // ProcessAncestorsIterator defines an iterator of ancestors
 type ProcessAncestorsIterator struct {
-	prev *ProcessCacheEntry
+	prev *ProcessContext
 }
 
 // Front returns the first element
@@ -1043,8 +1043,8 @@ func (p *ProcessContext) HasParent() bool {
 type ProcessContext struct {
 	Process
 
-	Parent   *Process           `field:"parent,opts:exposed_at_event_root_only,check:HasParent"`
-	Ancestor *ProcessCacheEntry `field:"ancestors,iterator:ProcessAncestorsIterator,check:IsNotKworker"`
+	Parent   *Process        `field:"parent,opts:exposed_at_event_root_only,check:HasParent"`
+	Ancestor *ProcessContext `field:"ancestors,iterator:ProcessAncestorsIterator,check:IsNotKworker"`
 }
 
 // PIDContext holds the process context of an kernel event
