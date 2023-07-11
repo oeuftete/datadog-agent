@@ -14,6 +14,8 @@
 #include "protocols/classification/stack-helpers.h"
 #include "protocols/classification/usm-context.h"
 #include "protocols/classification/routing.h"
+#include "protocols/grpc/defs.h"
+#include "protocols/grpc/helpers.h"
 #include "protocols/http/classification-helpers.h"
 #include "protocols/http2/helpers.h"
 #include "protocols/kafka/kafka-classification.h"
@@ -64,7 +66,24 @@ static __always_inline bool is_protocol_classification_supported() {
     return val > 0;
 }
 
-// Checks if a given buffer is http, http2, gRPC.
+// updates the the protocol stack and adds the current layer to the routing skip list
+static __always_inline void update_protocol_information(usm_context_t *usm_ctx, protocol_stack_t *stack, protocol_t proto) {
+    set_protocol(stack, proto);
+    usm_ctx->routing_skip_layers |= proto;
+}
+
+// Check if a given buffer is gRPC.
+static __always_inline void classify_api_protocols(usm_context_t *usm_ctx, protocol_stack_t *stack, const char *buf, __u32 size) {
+    enum grpc_classification_status status = parse_frames(buf, size);
+
+    if (status == GRPC_NOT_GRPC) {
+        mark_as_fully_classified(stack);
+    } else if (status == GRPC_GRPC) {
+        update_protocol_information(usm_ctx, stack, PROTOCOL_GRPC);
+    }
+}
+
+// Checks if a given buffer is http, http2.
 static __always_inline protocol_t classify_applayer_protocols(const char *buf, __u32 size) {
     if (is_http(buf, size)) {
         return PROTOCOL_HTTP;
@@ -109,16 +128,10 @@ static __always_inline protocol_t classify_queue_protocols(struct __sk_buff *skb
     return PROTOCOL_UNKNOWN;
 }
 
-// updates the the protocol stack and adds the current layer to the routing skip list
-static __always_inline void update_protocol_information(usm_context_t *usm_ctx, protocol_stack_t *stack, protocol_t proto) {
-    set_protocol(stack, proto);
-    usm_ctx->routing_skip_layers |= proto;
-}
-
 // A shared implementation for the runtime & prebuilt socket filter that classifies the protocols of the connections.
 __maybe_unused static __always_inline void protocol_classifier_entrypoint(struct __sk_buff *skb) {
-    skb_info_t skb_info = {0};
-    conn_tuple_t skb_tup = {0};
+    skb_info_t skb_info = { 0 };
+    conn_tuple_t skb_tup = { 0 };
 
     // Exporting the conn tuple from the skb, alongside couple of relevant fields from the skb.
     if (!read_conn_tuple_skb(skb, &skb_info, &skb_tup)) {
@@ -161,16 +174,21 @@ __maybe_unused static __always_inline void protocol_classifier_entrypoint(struct
         goto next_program;
     }
 
-    protocol_t cur_fragment_protocol = classify_applayer_protocols(buffer, usm_ctx->buffer.size);
-    if (cur_fragment_protocol) {
-        update_protocol_information(usm_ctx, protocol_stack, cur_fragment_protocol);
-        // this is mostly an optimization *for now* since we won't be classifying
-        // any other protocols if we have detected HTTP traffic
-        mark_as_fully_classified(protocol_stack);
+    protocol_t app_layer_protocol = classify_applayer_protocols(buffer, usm_ctx->buffer.size);
+    if (app_layer_protocol) {
+        update_protocol_information(usm_ctx, protocol_stack, app_layer_protocol);
+
+        if (app_layer_protocol == PROTOCOL_HTTP2) {
+            // If we found HTTP2, then we try to classify its content.
+            classify_api_protocols(usm_ctx, protocol_stack, buffer, usm_ctx->buffer.size);
+        } else {
+            mark_as_fully_classified(protocol_stack);
+        }
+
         return;
     }
 
- next_program:
+next_program:
     classification_next_program(skb, usm_ctx);
 }
 
@@ -192,7 +210,7 @@ __maybe_unused static __always_inline void protocol_classifier_entrypoint_queues
     update_protocol_information(usm_ctx, protocol_stack, cur_fragment_protocol);
     mark_as_fully_classified(protocol_stack);
 
- next_program:
+next_program:
     classification_next_program(skb, usm_ctx);
 }
 
@@ -215,7 +233,7 @@ __maybe_unused static __always_inline void protocol_classifier_entrypoint_dbs(st
 
     update_protocol_information(usm_ctx, protocol_stack, cur_fragment_protocol);
     mark_as_fully_classified(protocol_stack);
- next_program:
+next_program:
     classification_next_program(skb, usm_ctx);
 }
 
