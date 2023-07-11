@@ -22,6 +22,7 @@ const (
 	OTLPTagCardinalityKey     = OTLPMetrics + ".tag_cardinality"
 	OTLPDebugKey              = "debug"
 	OTLPDebug                 = OTLPSection + "." + OTLPDebugKey
+	OTLPHealthPort            = OTLPSection + ".health_check.port"
 )
 
 // SetupOTLP related configuration.
@@ -101,4 +102,5 @@ func setupOTLPEnvironmentVariables(config Config) {
 	// Debug settings
 	config.BindEnv(OTLPSection + ".debug.loglevel") // Deprecated
 	config.BindEnv(OTLPSection + ".debug.verbosity")
+	config.BindEnvAndSetDefault(OTLPHealthPort, 13133)
 }

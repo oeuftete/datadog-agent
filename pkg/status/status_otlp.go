@@ -8,24 +8,39 @@
 package status
 
 import (
-	"github.com/DataDog/datadog-agent/cmd/agent/common"
+	"fmt"
+	"io"
+	"net/http"
+
 	"github.com/DataDog/datadog-agent/pkg/config"
 	"github.com/DataDog/datadog-agent/pkg/otlp"
 )
 
 // GetOTLPStatus parses the otlp pipeline and its collector info to be sent to the frontend
 func GetOTLPStatus() map[string]interface{} {
-	status := make(map[string]interface{})
-	otlpIsEnabled := otlp.IsEnabled(config.Datadog)
-	var otlpCollectorStatus otlp.CollectorStatus
-	if otlpIsEnabled {
-		otlpCollectorStatus = otlp.GetCollectorStatus(common.OTLP)
-	} else {
-		otlpCollectorStatus = otlp.CollectorStatus{Status: "Not running", ErrorMessage: ""}
+	if !otlp.IsEnabled(config.Datadog) {
+		return map[string]interface{}{
+			"otlpStatus":          false,
+			"otlpCollectorStatus": otlp.CollectorStatus{Status: "Not running"},
+		}
 	}
 
-	status["otlpStatus"] = otlpIsEnabled
-	status["otlpCollectorStatus"] = otlpCollectorStatus.Status
-	status["otlpCollectorStatusErr"] = otlpCollectorStatus.ErrorMessage
-	return status
+	var status, statuserr string
+	resp, err := getHTTPClient().Get(fmt.Sprintf("http://localhost:%s", config.Datadog.GetInt(config.OTLPHealthPort)))
+	if err != nil {
+		statuserr = fmt.Sprintf("Can not retrieve status: %s", err)
+	}
+	io.ReadAll(resp.Body) //nolint:errcheck
+	defer resp.Body.Close()
+	switch resp.StatusCode {
+	case http.StatusOK:
+		status = "Ready"
+	case http.StatusInternalServerError:
+		status = "Unavailable"
+	}
+	return map[string]interface{}{
+		"otlpStatus":             true,
+		"otlpCollectorStatus":    status,
+		"otlpCollectorStatusErr": statuserr,
+	}
 }

@@ -47,6 +47,8 @@ import (
 	pkgforwarder "github.com/DataDog/datadog-agent/comp/forwarder/defaultforwarder"
 	"github.com/DataDog/datadog-agent/comp/metadata"
 	"github.com/DataDog/datadog-agent/comp/metadata/runner"
+	"github.com/DataDog/datadog-agent/comp/otelcol"
+	otelcolcollector "github.com/DataDog/datadog-agent/comp/otelcol/collector"
 	"github.com/DataDog/datadog-agent/comp/remote-config/rcclient"
 	"github.com/DataDog/datadog-agent/pkg/aggregator"
 	"github.com/DataDog/datadog-agent/pkg/api/healthprobe"
@@ -173,6 +175,7 @@ func run(log log.Component,
 	demux *aggregator.AgentDemultiplexer,
 	sharedSerializer serializer.MetricSerializer,
 	cliParams *cliParams,
+	_ otelcolcollector.Component,
 ) error {
 	defer func() {
 		stopAgent(cliParams, server)
@@ -240,6 +243,7 @@ func StartAgentWithDefaults() (dogstatsdServer.Component, error) {
 		forwarder defaultforwarder.Component,
 		metadataRunner runner.Component,
 		sharedSerializer serializer.MetricSerializer,
+		_ otelcolcollector.Component,
 	) error {
 		dsdServer = server
 
@@ -282,6 +286,12 @@ func getSharedFxOption() fx.Option {
 			return params
 		}),
 		dogstatsd.Bundle,
+		fx.Provide(func(cfg config.Component) otelcolcollector.Params {
+			on := otlp.IsEnabled(pkgconfig.Datadog)
+			inventories.SetAgentMetadata(inventories.AgentOTLPEnabled, on)
+			return otelcolcollector.Params{Stopped: !on}
+		}),
+		otelcol.Bundle,
 		rcclient.Module,
 		metadata.Bundle,
 		// injecting the aggregator demultiplexer to FX until we migrate it to a proper component. This allows
@@ -483,19 +493,6 @@ func startAgent(
 		pkgTelemetry.RegisterStatsSender(sender)
 	}
 
-	// Start OTLP intake
-	otlpEnabled := otlp.IsEnabled(pkgconfig.Datadog)
-	inventories.SetAgentMetadata(inventories.AgentOTLPEnabled, otlpEnabled)
-	if otlpEnabled {
-		var err error
-		common.OTLP, err = otlp.BuildAndStart(common.MainCtx, pkgconfig.Datadog, sharedSerializer)
-		if err != nil {
-			log.Errorf("Could not start OTLP: %s", err)
-		} else {
-			log.Debug("OTLP pipeline started")
-		}
-	}
-
 	// Start SNMP trap server
 	if traps.IsEnabled() {
 		err = traps.StartServer(hostnameDetected, demux)
@@ -592,9 +589,6 @@ func stopAgent(cliParams *cliParams, server dogstatsdServer.Component) {
 		}
 	}
 	server.Stop()
-	if common.OTLP != nil {
-		common.OTLP.Stop()
-	}
 	if common.AC != nil {
 		common.AC.Stop()
 	}

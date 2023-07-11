@@ -31,6 +31,7 @@ func TestNewMap(t *testing.T) {
 			pcfg: PipelineConfig{
 				OTLPReceiverConfig: testutil.OTLPConfigFromPorts("bindhost", 1234, 0),
 				TracePort:          5003,
+				HealthPort:         5004,
 				TracesEnabled:      true,
 				Debug: map[string]interface{}{
 					"loglevel": "disabled",
@@ -60,8 +61,19 @@ func TestNewMap(t *testing.T) {
 						"timeout": "10s",
 					},
 				},
+				"extensions": map[string]interface{}{
+					"health_check": map[string]interface{}{
+						"endpoint": "localhost:5004",
+						"check_collector_pipeline": map[string]interface{}{
+							"enabled":                    true,
+							"interval":                   "5m",
+							"exporter_failure_threshold": 5,
+						},
+					},
+				},
 				"service": map[string]interface{}{
-					"telemetry": map[string]interface{}{"metrics": map[string]interface{}{"level": "none"}},
+					"extensions": []interface{}{"health_check"},
+					"telemetry":  map[string]interface{}{"metrics": map[string]interface{}{"level": "none"}},
 					"pipelines": map[string]interface{}{
 						"traces": map[string]interface{}{
 							"receivers":  []interface{}{"otlp"},
@@ -77,6 +89,7 @@ func TestNewMap(t *testing.T) {
 			pcfg: PipelineConfig{
 				OTLPReceiverConfig: testutil.OTLPConfigFromPorts("bindhost", 0, 1234),
 				TracePort:          5003,
+				HealthPort:         5004,
 				TracesEnabled:      true,
 				MetricsEnabled:     true,
 				Metrics: map[string]interface{}{
@@ -129,8 +142,19 @@ func TestNewMap(t *testing.T) {
 						},
 					},
 				},
+				"extensions": map[string]interface{}{
+					"health_check": map[string]interface{}{
+						"endpoint": "localhost:5004",
+						"check_collector_pipeline": map[string]interface{}{
+							"enabled":                    true,
+							"interval":                   "5m",
+							"exporter_failure_threshold": 5,
+						},
+					},
+				},
 				"service": map[string]interface{}{
-					"telemetry": map[string]interface{}{"metrics": map[string]interface{}{"level": "none"}},
+					"extensions": []interface{}{"health_check"},
+					"telemetry":  map[string]interface{}{"metrics": map[string]interface{}{"level": "none"}},
 					"pipelines": map[string]interface{}{
 						"traces": map[string]interface{}{
 							"receivers":  []interface{}{"otlp"},
@@ -151,6 +175,7 @@ func TestNewMap(t *testing.T) {
 			pcfg: PipelineConfig{
 				OTLPReceiverConfig: testutil.OTLPConfigFromPorts("bindhost", 0, 1234),
 				TracePort:          5003,
+				HealthPort:         5004,
 				TracesEnabled:      true,
 				MetricsEnabled:     true,
 				Metrics: map[string]interface{}{
@@ -203,8 +228,19 @@ func TestNewMap(t *testing.T) {
 						},
 					},
 				},
+				"extensions": map[string]interface{}{
+					"health_check": map[string]interface{}{
+						"endpoint": "localhost:5004",
+						"check_collector_pipeline": map[string]interface{}{
+							"enabled":                    true,
+							"interval":                   "5m",
+							"exporter_failure_threshold": 5,
+						},
+					},
+				},
 				"service": map[string]interface{}{
-					"telemetry": map[string]interface{}{"metrics": map[string]interface{}{"level": "none"}},
+					"extensions": []interface{}{"health_check"},
+					"telemetry":  map[string]interface{}{"metrics": map[string]interface{}{"level": "none"}},
 					"pipelines": map[string]interface{}{
 						"traces": map[string]interface{}{
 							"receivers":  []interface{}{"otlp"},
@@ -225,6 +261,7 @@ func TestNewMap(t *testing.T) {
 			pcfg: PipelineConfig{
 				OTLPReceiverConfig: testutil.OTLPConfigFromPorts("bindhost", 1234, 5678),
 				TracePort:          5003,
+				HealthPort:         5004,
 				TracesEnabled:      true,
 				Debug: map[string]interface{}{
 					"loglevel": "disabled",
@@ -257,8 +294,19 @@ func TestNewMap(t *testing.T) {
 						"endpoint":    "localhost:5003",
 					},
 				},
+				"extensions": map[string]interface{}{
+					"health_check": map[string]interface{}{
+						"endpoint": "localhost:5004",
+						"check_collector_pipeline": map[string]interface{}{
+							"enabled":                    true,
+							"interval":                   "5m",
+							"exporter_failure_threshold": 5,
+						},
+					},
+				},
 				"service": map[string]interface{}{
-					"telemetry": map[string]interface{}{"metrics": map[string]interface{}{"level": "none"}},
+					"extensions": []interface{}{"health_check"},
+					"telemetry":  map[string]interface{}{"metrics": map[string]interface{}{"level": "none"}},
 					"pipelines": map[string]interface{}{
 						"traces": map[string]interface{}{
 							"receivers":  []interface{}{"otlp"},
@@ -274,6 +322,7 @@ func TestNewMap(t *testing.T) {
 			pcfg: PipelineConfig{
 				OTLPReceiverConfig: testutil.OTLPConfigFromPorts("bindhost", 0, 1234),
 				TracePort:          5003,
+				HealthPort:         5004,
 				MetricsEnabled:     true,
 				Metrics: map[string]interface{}{
 					"delta_ttl":                                1500,
@@ -318,8 +367,19 @@ func TestNewMap(t *testing.T) {
 						},
 					},
 				},
+				"extensions": map[string]interface{}{
+					"health_check": map[string]interface{}{
+						"endpoint": "localhost:5004",
+						"check_collector_pipeline": map[string]interface{}{
+							"enabled":                    true,
+							"interval":                   "5m",
+							"exporter_failure_threshold": 5,
+						},
+					},
+				},
 				"service": map[string]interface{}{
-					"telemetry": map[string]interface{}{"metrics": map[string]interface{}{"level": "none"}},
+					"extensions": []interface{}{"health_check"},
+					"telemetry":  map[string]interface{}{"metrics": map[string]interface{}{"level": "none"}},
 					"pipelines": map[string]interface{}{
 						"metrics": map[string]interface{}{
 							"receivers":  []interface{}{"otlp"},
@@ -335,6 +395,7 @@ func TestNewMap(t *testing.T) {
 			pcfg: PipelineConfig{
 				OTLPReceiverConfig: testutil.OTLPConfigFromPorts("bindhost", 1234, 0),
 				TracePort:          5003,
+				HealthPort:         5004,
 				TracesEnabled:      true,
 				Debug: map[string]interface{}{
 					"loglevel": "info",
@@ -367,8 +428,19 @@ func TestNewMap(t *testing.T) {
 						"loglevel": "info",
 					},
 				},
+				"extensions": map[string]interface{}{
+					"health_check": map[string]interface{}{
+						"endpoint": "localhost:5004",
+						"check_collector_pipeline": map[string]interface{}{
+							"enabled":                    true,
+							"interval":                   "5m",
+							"exporter_failure_threshold": 5,
+						},
+					},
+				},
 				"service": map[string]interface{}{
-					"telemetry": map[string]interface{}{"metrics": map[string]interface{}{"level": "none"}},
+					"extensions": []interface{}{"health_check"},
+					"telemetry":  map[string]interface{}{"metrics": map[string]interface{}{"level": "none"}},
 					"pipelines": map[string]interface{}{
 						"traces": map[string]interface{}{
 							"receivers":  []interface{}{"otlp"},
@@ -384,6 +456,7 @@ func TestNewMap(t *testing.T) {
 			pcfg: PipelineConfig{
 				OTLPReceiverConfig: testutil.OTLPConfigFromPorts("bindhost", 0, 1234),
 				TracePort:          5003,
+				HealthPort:         5004,
 				MetricsEnabled:     true,
 				Metrics: map[string]interface{}{
 					"delta_ttl":                                1500,
@@ -429,8 +502,19 @@ func TestNewMap(t *testing.T) {
 						"loglevel": "debug",
 					},
 				},
+				"extensions": map[string]interface{}{
+					"health_check": map[string]interface{}{
+						"endpoint": "localhost:5004",
+						"check_collector_pipeline": map[string]interface{}{
+							"enabled":                    true,
+							"interval":                   "5m",
+							"exporter_failure_threshold": 5,
+						},
+					},
+				},
 				"service": map[string]interface{}{
-					"telemetry": map[string]interface{}{"metrics": map[string]interface{}{"level": "none"}},
+					"extensions": []interface{}{"health_check"},
+					"telemetry":  map[string]interface{}{"metrics": map[string]interface{}{"level": "none"}},
 					"pipelines": map[string]interface{}{
 						"metrics": map[string]interface{}{
 							"receivers":  []interface{}{"otlp"},
@@ -446,6 +530,7 @@ func TestNewMap(t *testing.T) {
 			pcfg: PipelineConfig{
 				OTLPReceiverConfig: testutil.OTLPConfigFromPorts("bindhost", 0, 1234),
 				TracePort:          5003,
+				HealthPort:         5004,
 				TracesEnabled:      true,
 				MetricsEnabled:     true,
 				Metrics: map[string]interface{}{
@@ -499,8 +584,19 @@ func TestNewMap(t *testing.T) {
 						"loglevel": "warn",
 					},
 				},
+				"extensions": map[string]interface{}{
+					"health_check": map[string]interface{}{
+						"endpoint": "localhost:5004",
+						"check_collector_pipeline": map[string]interface{}{
+							"enabled":                    true,
+							"interval":                   "5m",
+							"exporter_failure_threshold": 5,
+						},
+					},
+				},
 				"service": map[string]interface{}{
-					"telemetry": map[string]interface{}{"metrics": map[string]interface{}{"level": "none"}},
+					"extensions": []interface{}{"health_check"},
+					"telemetry":  map[string]interface{}{"metrics": map[string]interface{}{"level": "none"}},
 					"pipelines": map[string]interface{}{
 						"traces": map[string]interface{}{
 							"receivers":  []interface{}{"otlp"},
@@ -522,6 +618,7 @@ func TestNewMap(t *testing.T) {
 				OpenCensusReceiverConfig: map[string]interface{}{"key": "value", "k2": "v2"},
 				OTLPReceiverConfig:       testutil.OTLPConfigFromPorts("bindhost", 0, 1234),
 				TracePort:                5003,
+				HealthPort:               5004,
 				TracesEnabled:            true,
 				MetricsEnabled:           true,
 				Metrics: map[string]interface{}{
@@ -576,8 +673,19 @@ func TestNewMap(t *testing.T) {
 						"loglevel": "warn",
 					},
 				},
+				"extensions": map[string]interface{}{
+					"health_check": map[string]interface{}{
+						"endpoint": "localhost:5004",
+						"check_collector_pipeline": map[string]interface{}{
+							"enabled":                    true,
+							"interval":                   "5m",
+							"exporter_failure_threshold": 5,
+						},
+					},
+				},
 				"service": map[string]interface{}{
-					"telemetry": map[string]interface{}{"metrics": map[string]interface{}{"level": "none"}},
+					"extensions": []interface{}{"health_check"},
+					"telemetry":  map[string]interface{}{"metrics": map[string]interface{}{"level": "none"}},
 					"pipelines": map[string]interface{}{
 						"traces": map[string]interface{}{
 							"receivers":  []interface{}{"otlp", "opencensus"},

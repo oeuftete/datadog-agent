@@ -15,5 +15,7 @@ otlp_config:
       mode: counters
       send_count_sum_metrics: true
       send_aggregation_metrics: true
+  health_check:
+    port: 13134
   debug:
     loglevel: debug

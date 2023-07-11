@@ -21,7 +21,15 @@ exporters:
       insecure: true
     compression: none
 
+extensions:
+  health_check:
+    check_collector_pipeline:
+      enabled: true
+      interval: "5m"
+      exporter_failure_threshold: 5
+
 service:
+  extensions: [health_check]
   telemetry:
     metrics:
       level: none
@@ -39,7 +47,15 @@ receivers:
 exporters:
   serializer:
 
+extensions:
+  health_check:
+    check_collector_pipeline:
+      enabled: true
+      interval: "5m"
+      exporter_failure_threshold: 5
+
 service:
+  extensions: [health_check]
   telemetry:
     metrics:
       level: none

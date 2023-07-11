@@ -26,13 +26,14 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 
-	"github.com/DataDog/datadog-agent/pkg/config"
+	"github.com/DataDog/datadog-agent/comp/core/config"
 	"github.com/DataDog/datadog-agent/pkg/otlp/internal/serializerexporter"
 	"github.com/DataDog/datadog-agent/pkg/serializer"
 	"github.com/DataDog/datadog-agent/pkg/util/flavor"
 	"github.com/DataDog/datadog-agent/pkg/util/log"
 	zapAgent "github.com/DataDog/datadog-agent/pkg/util/log/zap"
 	"github.com/DataDog/datadog-agent/pkg/version"
+	"github.com/open-telemetry/opentelemetry-collector-contrib/extension/healthcheckextension"
 	"github.com/open-telemetry/opentelemetry-collector-contrib/receiver/opencensusreceiver"
 )
 
@@ -46,7 +47,9 @@ func getComponents(s serializer.MetricSerializer) (
 ) {
 	var errs []error
 
-	extensions, err := extension.MakeFactoryMap()
+	extensions, err := extension.MakeFactoryMap(
+		healthcheckextension.NewFactory(),
+	)
 	if err != nil {
 		errs = append(errs, err)
 	}
@@ -104,6 +107,9 @@ type PipelineConfig struct {
 	OpenCensusReceiverConfig map[string]interface{}
 	// TracePort is the trace Agent OTLP port.
 	TracePort uint
+	// HealthPort specifies the port to use for the healtcheck endpoint. It defaults
+	// to 13133.
+	HealthPort uint
 	// MetricsEnabled states whether OTLP metrics support is enabled.
 	MetricsEnabled bool
 	// TracesEnabled states whether OTLP traces support is enabled.
@@ -206,23 +212,7 @@ func (p *Pipeline) Stop() {
 	p.col.Shutdown()
 }
 
-// BuildAndStart builds and starts an OTLP pipeline
-func BuildAndStart(ctx context.Context, cfg config.Config, s serializer.MetricSerializer) (*Pipeline, error) {
-	p, err := NewPipelineFromAgentConfig(cfg, s)
-	if err != nil {
-		return nil, err
-	}
-	go func() {
-		err := p.Run(ctx)
-		if err != nil {
-			pipelineError.Store(fmt.Errorf("Error running the OTLP pipeline: %w", err))
-			log.Errorf(pipelineError.Load().Error())
-		}
-	}()
-	return p, nil
-}
-
-func NewPipelineFromAgentConfig(cfg config.Config, s serializer.MetricSerializer) (*Pipeline, error) {
+func NewPipelineFromAgentConfig(cfg config.Component, s serializer.MetricSerializer) (*Pipeline, error) {
 	pcfg, err := FromAgentConfig(cfg)
 	if err != nil {
 		pipelineError.Store(fmt.Errorf("config error: %w", err))
@@ -239,7 +229,7 @@ func NewPipelineFromAgentConfig(cfg config.Config, s serializer.MetricSerializer
 }
 
 // GetCollectorStatus get the collector status and error message (if there is one)
-func GetCollectorStatus(p *Pipeline) CollectorStatus {
+func (p *Pipeline) GetCollectorStatus() CollectorStatus {
 	statusMessage, errMessage := "Failed to start", ""
 	if p != nil {
 		statusMessage = p.col.GetState().String()

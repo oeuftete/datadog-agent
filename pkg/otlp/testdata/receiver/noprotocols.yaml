@@ -1,2 +1,4 @@
 otlp_config:
   receiver:
+  health_check:
+    port: 13132
