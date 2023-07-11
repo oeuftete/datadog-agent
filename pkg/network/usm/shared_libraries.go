@@ -11,6 +11,7 @@ import (
 	"bufio"
 	"encoding/base64"
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"os"
 	"regexp"
@@ -459,6 +460,12 @@ func (r *soRegistry) register(root, libPath string, pid uint32, rule soRule) {
 	}
 
 	if err := rule.registerCB(pathID, root, libPath); err != nil {
+		// short living process would be hard to catch and will failed when we try to open the library
+		// so let's failed silently
+		if errors.Is(err, os.ErrNotExist) {
+			return
+		}
+
 		log.Debugf("error registering library (adding to blocklist) %s path %s by pid %d : %s", pathID.String(), hostLibPath, pid, err)
 		// we are calling unregisterCB here as some uprobes could be already attached, unregisterCB cleanup those entries
 		if rule.unregisterCB != nil {
