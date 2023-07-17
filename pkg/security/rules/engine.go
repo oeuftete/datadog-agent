@@ -334,7 +334,7 @@ func (e *RuleEngine) RuleMatch(rule *rules.Rule, event eval.Event) bool {
 		ev.Rules = append(ev.Rules, model.NewMatchedRule(rule.Definition.ID, rule.Definition.Version, rule.Definition.Tags, rule.Definition.Policy.Name, rule.Definition.Policy.Version))
 	}
 	if val, ok := rule.Definition.GetTag("ruleset"); ok && val == "threat_score" {
-		return false // if the triggered rule is only meant to tag secdumps, dont send it
+		return true // if the triggered rule is only meant to tag secdumps, dont send it
 	}
 
 	// needs to be resolved here, outside of the callback as using process tree
