@@ -185,8 +185,8 @@ func TestProcessContext(t *testing.T) {
 			os.Remove(testFile)
 
 			return nil
-		}, func(event *model.Event, rule *rules.Rule) {
-			t.Errorf("shouldn't get an event: got event: %s", test.debugEvent(event))
+		}, func(event *model.Event, rule *rules.Rule) error {
+			return fmt.Errorf("shouldn't get an event: got event: %s", test.debugEvent(event))
 		})
 		if err == nil {
 			t.Fatal("shouldn't get an event")
@@ -413,7 +413,7 @@ func TestProcessContext(t *testing.T) {
 			// we need to ignore the error because the string of "a" generates a "File name too long" error
 			_ = cmd.Run()
 			return nil
-		}, func(event *model.Event, rule *rules.Rule) {
+		}, func(event *model.Event, rule *rules.Rule) error {
 			execArgs, err := event.GetFieldValue("exec.args")
 			if err != nil {
 				t.Errorf("not able to get args")
@@ -434,6 +434,7 @@ func TestProcessContext(t *testing.T) {
 			if !truncated.(bool) {
 				t.Errorf("arg not truncated: %s", execArgs.(string))
 			}
+			return nil
 		})
 	})
 
@@ -454,7 +455,7 @@ func TestProcessContext(t *testing.T) {
 			// we need to ignore the error because the string of "a" generates a "File name too long" error
 			_ = cmd.Run()
 			return nil
-		}, func(event *model.Event, rule *rules.Rule) {
+		}, func(event *model.Event, rule *rules.Rule) error {
 			execArgs, err := event.GetFieldValue("exec.args")
 			if err != nil {
 				t.Errorf("not able to get args")
@@ -479,6 +480,7 @@ func TestProcessContext(t *testing.T) {
 			if !truncated.(bool) {
 				t.Errorf("arg not truncated: %s", execArgs.(string))
 			}
+			return nil
 		})
 	})
 
@@ -556,7 +558,7 @@ func TestProcessContext(t *testing.T) {
 			}
 			cmd := cmdFunc(bin, args, envs)
 			return cmd.Run()
-		}, func(event *model.Event, rule *rules.Rule) {
+		}, func(event *model.Event, rule *rules.Rule) error {
 			execEnvp, err := event.GetFieldValue("exec.envp")
 			if err != nil {
 				t.Errorf("not able to get exec.envp")
@@ -577,6 +579,7 @@ func TestProcessContext(t *testing.T) {
 			if !truncated.(bool) {
 				t.Errorf("envs not truncated: %s", execEnvp.([]string))
 			}
+			return nil
 		})
 	})
 
@@ -607,7 +610,7 @@ func TestProcessContext(t *testing.T) {
 			}
 			cmd := cmdFunc(bin, args, envs)
 			return cmd.Run()
-		}, func(event *model.Event, rule *rules.Rule) {
+		}, func(event *model.Event, rule *rules.Rule) error {
 			assertTriggeredRule(t, rule, "test_rule_args_envs")
 
 			execEnvp, err := event.GetFieldValue("exec.envp")
@@ -634,6 +637,7 @@ func TestProcessContext(t *testing.T) {
 			if !truncated.(bool) {
 				t.Errorf("envs not truncated: %s", execEnvp.([]string))
 			}
+			return nil
 		})
 	})
 
@@ -2204,8 +2208,8 @@ func TestProcessFilelessExecution(t *testing.T) {
 
 					cmd := exec.Command(testFile)
 					return cmd.Run()
-				}, func(event *model.Event, rule *rules.Rule) {
-					t.Errorf("shouldn't get an event: got event: %s", testModule.debugEvent(event))
+				}, func(event *model.Event, rule *rules.Rule) error {
+					return fmt.Errorf("shouldn't get an event: got event: %s", testModule.debugEvent(event))
 				})
 				if err == nil {
 					t.Fatal("shouldn't get an event")

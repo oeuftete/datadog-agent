@@ -9,6 +9,7 @@ package tests
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"strings"
 	"testing"
@@ -850,10 +851,11 @@ func TestSecurityProfileAutoSuppression(t *testing.T) {
 			cmd := dockerInstance.Command("getconf", []string{"-a"}, []string{})
 			_, err = cmd.CombinedOutput()
 			return err
-		}, func(event *model.Event, rule *rules.Rule) {
+		}, func(event *model.Event, rule *rules.Rule) error {
 			if event.ProcessContext.ContainerID == dump.ContainerID {
-				t.Fatal("Got a signal that should have been suppressed")
+				return fmt.Errorf("Got a signal that should have been suppressed")
 			}
+			return nil
 		})
 		if err != nil && !strings.HasPrefix(err.Error(), "timeout") {
 			t.Fatal("Got an error different from timeout")
@@ -866,10 +868,11 @@ func TestSecurityProfileAutoSuppression(t *testing.T) {
 			cmd := dockerInstance.Command("nslookup", []string{"foo.bar"}, []string{})
 			_, err = cmd.CombinedOutput()
 			return err
-		}, func(event *model.Event, rule *rules.Rule) {
+		}, func(event *model.Event, rule *rules.Rule) error {
 			if event.ProcessContext.ContainerID == dump.ContainerID {
-				t.Fatal("Got a signal that should have been suppressed")
+				return fmt.Errorf("Got a signal that should have been suppressed")
 			}
+			return nil
 		})
 		if err != nil && !strings.HasPrefix(err.Error(), "timeout") {
 			t.Fatal("Got an error different from timeout")

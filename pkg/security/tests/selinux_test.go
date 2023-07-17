@@ -136,8 +136,8 @@ func TestSELinux(t *testing.T) {
 				return fmt.Errorf("failed to write to selinuxfs: %w", err)
 			}
 			return nil
-		}, func(event *model.Event, rule *rules.Rule) {
-			t.Errorf("expected error and got an event: %s", test.debugEvent(event))
+		}, func(event *model.Event, rule *rules.Rule) error {
+			return fmt.Errorf("expected error and got an event: %s", test.debugEvent(event))
 		})
 		if err == nil {
 			t.Fatal("expected error")

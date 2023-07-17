@@ -224,8 +224,9 @@ func TestOpen(t *testing.T) {
 				return err
 			}
 			return f.Close()
-		}, func(event *model.Event, r *rules.Rule) {
+		}, func(event *model.Event, r *rules.Rule) error {
 			assert.Equal(t, "open", event.GetType(), "wrong event type")
+			return nil
 		})
 		if err != nil {
 			// if the file was not created, we can't open it with io_uring

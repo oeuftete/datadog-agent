@@ -202,8 +202,9 @@ func BenchmarkERPCDentryResolutionSegment(b *testing.B) {
 			return err
 		}
 		return syscall.Close(fd)
-	}, func(event *model.Event, _ *rules.Rule) {
+	}, func(event *model.Event, _ *rules.Rule) error {
 		pathKey = event.Open.File.PathKey
+		return nil
 	})
 	if err != nil {
 		b.Fatal(err)
@@ -266,8 +267,9 @@ func BenchmarkERPCDentryResolutionPath(b *testing.B) {
 			return err
 		}
 		return syscall.Close(fd)
-	}, func(event *model.Event, _ *rules.Rule) {
+	}, func(event *model.Event, _ *rules.Rule) error {
 		pathKey = event.Open.File.PathKey
+		return nil
 	})
 	if err != nil {
 		b.Fatal(err)
@@ -330,8 +332,9 @@ func BenchmarkMapDentryResolutionSegment(b *testing.B) {
 			return err
 		}
 		return syscall.Close(fd)
-	}, func(event *model.Event, _ *rules.Rule) {
+	}, func(event *model.Event, _ *rules.Rule) error {
 		pathKey = event.Open.File.PathKey
+		return nil
 	})
 	if err != nil {
 		b.Fatal(err)
@@ -393,8 +396,9 @@ func BenchmarkMapDentryResolutionPath(b *testing.B) {
 			return err
 		}
 		return syscall.Close(fd)
-	}, func(event *model.Event, _ *rules.Rule) {
+	}, func(event *model.Event, _ *rules.Rule) error {
 		pathKey = event.Open.File.PathKey
+		return nil
 	})
 	if err != nil {
 		b.Fatal(err)

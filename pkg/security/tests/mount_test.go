@@ -510,8 +510,8 @@ func TestMountEvent(t *testing.T) {
 				return err
 			}
 			return nil
-		}, func(event *model.Event, rule *rules.Rule) {
-			t.Errorf("shouldn't get an event: event %s matched rule %s", test.debugEvent(event), rule.Expression)
+		}, func(event *model.Event, rule *rules.Rule) error {
+			return fmt.Errorf("shouldn't get an event: event %s matched rule %s", test.debugEvent(event), rule.Expression)
 		})
 		if err == nil {
 			t.Error("shouldn't get an event")

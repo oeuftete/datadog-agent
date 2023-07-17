@@ -245,8 +245,8 @@ func TestChown(t *testing.T) {
 				return fmt.Errorf("%s: %w", out, err)
 			}
 			return nil
-		}, func(event *model.Event, r *rules.Rule) {
-			t.Error("Event received")
+		}, func(event *model.Event, r *rules.Rule) error {
+			return fmt.Errorf("Event received")
 		})
 	})
 
