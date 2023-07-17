@@ -81,8 +81,9 @@ func stressOpen(t *testing.T, rule *rules.RuleDefinition, pathname string, size 
 	}
 
 	events := 0
-	test.RegisterRuleEventHandler(func(_ *model.Event, _ *rules.Rule) {
+	test.RegisterRuleEventHandler(func(_ *model.Event, _ *rules.Rule) error {
 		events++
+		return nil
 	})
 	defer test.RegisterRuleEventHandler(nil)
 
@@ -213,8 +214,9 @@ func stressExec(t *testing.T, rule *rules.RuleDefinition, pathname string, execu
 	}
 
 	events := 0
-	test.RegisterRuleEventHandler(func(_ *model.Event, _ *rules.Rule) {
+	test.RegisterRuleEventHandler(func(_ *model.Event, _ *rules.Rule) error {
 		events++
+		return nil
 	})
 	defer test.RegisterRuleEventHandler(nil)
 

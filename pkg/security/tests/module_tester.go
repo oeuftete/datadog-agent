@@ -319,7 +319,7 @@ type onDiscarderPushedHandler func(event eval.Event, field eval.Field, eventType
 
 type eventHandlers struct {
 	sync.RWMutex
-	onRuleMatch       onRuleHandler
+	onRuleMatch       func(*model.Event, *rules.Rule) error
 	onProbeEvent      onProbeEventHandler
 	onCustomSendEvent onCustomSendEventHandler
 	onDiscarderPushed onDiscarderPushedHandler
@@ -413,6 +413,12 @@ func assertNearTime(tb testing.TB, ns uint64) bool {
 func assertTriggeredRule(tb testing.TB, r *rules.Rule, id string) bool {
 	tb.Helper()
 	return assert.Equal(tb, id, r.ID, "wrong triggered rule")
+}
+
+//nolint:deadcode,unused
+func assertPassedRule(tb testing.TB, e *model.Event, id string) bool {
+	tb.Helper()
+	return assert.True(tb, searchTriggeredRules(e, id), fmt.Sprintf("expected rule %s to be triggered", id))
 }
 
 //nolint:deadcode,unused
@@ -647,14 +653,6 @@ func validateProcessContext(tb testing.TB, event *model.Event, probe *sprobe.Pro
 
 	validateProcessContextLineage(tb, event, probe)
 	validateProcessContextSECL(tb, event, probe)
-}
-
-//nolint:deadcode,unused
-func validateEvent(tb testing.TB, validate func(event *model.Event, rule *rules.Rule), probe *sprobe.Probe) func(event *model.Event, rule *rules.Rule) {
-	return func(event *model.Event, rule *rules.Rule) {
-		validateProcessContext(tb, event, probe)
-		validate(event, rule)
-	}
 }
 
 //nolint:deadcode,unused
@@ -1212,10 +1210,123 @@ func (err ErrSkipTest) Error() string {
 	return err.msg
 }
 
+// ErrSkipEvent is used to notify that a test should continue
+type ErrSkipEvent struct {
+	msg string
+}
+
+func (err ErrSkipEvent) Error() string {
+	return err.msg
+}
+
+func (tm *testModule) minifyEvent(event *model.Event) (string, error) {
+	eventJSON, err := tm.marshalEvent(event)
+	if err != nil {
+		return "", err
+	}
+	var m map[string]interface{}
+	if err := json.Unmarshal([]byte(eventJSON), &m); err != nil {
+		return "", err
+	}
+	if processMap, found := m["process"].(map[string]interface{}); found {
+		if ancestors, found := processMap["ancestors"].([]interface{}); found {
+			for _, ancestor := range ancestors {
+				delete(ancestor.(map[string]interface{}), "credentials")
+			}
+		}
+		if parent, found := processMap["parent"].(map[string]interface{}); found {
+			delete(parent, "credentials")
+		}
+		delete(processMap, "credentials")
+		delete(processMap, "ancestors")
+	}
+
+	if eventJSON, err := json.MarshalIndent(m, "", "  "); err != nil {
+		return "", err
+	} else {
+		return string(eventJSON), nil
+	}
+}
+
+func (tm *testModule) mapFilters(filters ...func(event *model.Event, rule *rules.Rule) error) func(event *model.Event, rule *rules.Rule) error {
+	return func(event *model.Event, rule *rules.Rule) error {
+		for _, filter := range filters {
+			if err := filter(event, rule); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+}
+
+func searchTriggeredRules(event *model.Event, ruleIDs ...string) bool {
+	found := false
+LOOP:
+	for _, triggeredID := range event.Rules {
+		for _, id := range ruleIDs {
+			if id == triggeredID.RuleID {
+				found = true
+				break LOOP
+			}
+		}
+	}
+
+	return found
+}
+
+func (tm *testModule) filterRule(ruleIDs ...string) func(event *model.Event, rule *rules.Rule) error {
+	matchRule := tm.matchRule(ruleIDs...)
+	return func(event *model.Event, rule *rules.Rule) error {
+		if err := matchRule(event, rule); err != nil {
+			return &ErrSkipEvent{msg: err.Error()}
+		}
+		return nil
+	}
+}
+
+func (tm *testModule) matchRule(ruleIDs ...string) func(event *model.Event, rule *rules.Rule) error {
+	return func(event *model.Event, rule *rules.Rule) error {
+		if found := searchTriggeredRules(event, ruleIDs...); !found {
+			eventJSON, _ := tm.minifyEvent(event)
+			return fmt.Errorf("expected rules %+v not found in %+v, %s was triggered by %s", ruleIDs, event.Rules, rule.Definition.ID, eventJSON)
+		}
+		return nil
+	}
+}
+
+func (tm *testModule) assertPassedRule(tb testing.TB, event *model.Event, ruleIDs ...string) error {
+	if !searchTriggeredRules(event, ruleIDs...) {
+		eventJSON, _ := tm.minifyEvent(event)
+		tb.Errorf("expected rules %+v not found in %+v (triggered by %s)", ruleIDs, event.Rules, eventJSON)
+	}
+	return nil
+}
+
+func (tm *testModule) WaitSignals(tb testing.TB, action func() error, cbs ...func(event *model.Event, rule *rules.Rule) error) {
+	tb.Helper()
+
+	tm.waitSignal(tb, action, func(event *model.Event, rule *rules.Rule) error {
+		validateProcessContext(tb, event, tm.probe)
+
+		return tm.mapFilters(cbs...)(event, rule)
+	})
+
+}
+
 func (tm *testModule) WaitSignal(tb testing.TB, action func() error, cb onRuleHandler) {
 	tb.Helper()
 
-	if err := tm.GetSignal(tb, action, validateEvent(tb, cb, tm.probe)); err != nil {
+	tm.waitSignal(tb, action, func(event *model.Event, rule *rules.Rule) error {
+		validateProcessContext(tb, event, tm.probe)
+		cb(event, rule)
+		return nil
+	})
+}
+
+func (tm *testModule) waitSignal(tb testing.TB, action func() error, cb func(*model.Event, *rules.Rule) error) {
+	tb.Helper()
+
+	if err := tm.GetSignal(tb, action, cb); err != nil {
 		if _, ok := err.(ErrSkipTest); ok {
 			tb.Skip(err)
 		} else {
@@ -1224,7 +1335,7 @@ func (tm *testModule) WaitSignal(tb testing.TB, action func() error, cb onRuleHa
 	}
 }
 
-func (tm *testModule) GetSignal(tb testing.TB, action func() error, cb onRuleHandler) error {
+func (tm *testModule) GetSignal(tb testing.TB, action func() error, cb func(event *model.Event, rule *rules.Rule) error) error {
 	tb.Helper()
 
 	ctx, cancel := context.WithCancel(context.Background())
@@ -1232,23 +1343,39 @@ func (tm *testModule) GetSignal(tb testing.TB, action func() error, cb onRuleHan
 
 	message := make(chan ActionMessage, 1)
 	failNow := make(chan bool, 1)
+	var testErrors *multierror.Error
 
-	tm.RegisterRuleEventHandler(func(e *model.Event, r *rules.Rule) {
+	tm.RegisterRuleEventHandler(func(e *model.Event, r *rules.Rule) error {
 		tb.Helper()
+
+		if value, _ := r.Definition.GetTag("ruleset"); value == "threat_score" {
+			return nil
+		}
+
 		select {
 		case <-ctx.Done():
-			return
+			return nil
 		case msg := <-message:
 			switch msg {
 			case Continue:
-				cb(e, r)
+				if err := cb(e, r); err != nil {
+					var errSkipEvent *ErrSkipEvent
+					if errors.As(err, &errSkipEvent) {
+						testErrors = multierror.Append(testErrors, err)
+						message <- Continue
+						return nil
+					} else {
+						tb.Error(err)
+					}
+				}
 				if tb.Skipped() || tb.Failed() {
 					failNow <- true
 				}
 			case Skip:
 			}
+			cancel()
 		}
-		cancel()
+		return nil
 	})
 
 	defer func() {
@@ -1261,6 +1388,12 @@ func (tm *testModule) GetSignal(tb testing.TB, action func() error, cb onRuleHan
 	}
 	message <- Continue
 
+	defer func() {
+		if err := testErrors.ErrorOrNil(); tb.Failed() && err != nil {
+			tm.t.Logf("Checks returned: %+v", err)
+		}
+	}()
+
 	select {
 	case <-failNow:
 		tb.FailNow()
@@ -1272,7 +1405,7 @@ func (tm *testModule) GetSignal(tb testing.TB, action func() error, cb onRuleHan
 	}
 }
 
-func (tm *testModule) RegisterRuleEventHandler(cb onRuleHandler) {
+func (tm *testModule) RegisterRuleEventHandler(cb func(e *model.Event, r *rules.Rule) error) {
 	tm.eventHandlers.Lock()
 	tm.eventHandlers.onRuleMatch = cb
 	tm.eventHandlers.Unlock()
