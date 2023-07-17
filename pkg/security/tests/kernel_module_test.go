@@ -15,6 +15,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/avast/retry-go/v4"
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/sys/unix"
 
@@ -124,28 +125,38 @@ func TestLoadModule(t *testing.T) {
 
 	ruleDefs := []*rules.RuleDefinition{
 		{
-			ID:         "test_load_module_from_memory",
-			Expression: fmt.Sprintf(`load_module.name == "%s" && load_module.loaded_from_memory == true && load_module.args == "" && !process.is_kworker`, testModuleName),
+			ID:         "test_load_module",
+			Expression: `load_module.name != ""`, // get every module init
 		},
 		{
-			ID:         "test_load_module",
+			ID:         "test_load_module_from_memory",
+			Expression: fmt.Sprintf(`load_module.name == "%s" && load_module.loaded_from_memory == true && load_module.args == "" && !process.is_kworker`, testModuleName),
+			Tags:       map[string]string{"ruleset": "threat_score"},
+		},
+		{
+			ID:         "test_load_module_from_memory_with_params",
+			Expression: fmt.Sprintf(`load_module.name == "%s" && load_module.argv in ["toto=5"] && load_module.loaded_from_memory == true`, testModuleName),
+			Tags:       map[string]string{"ruleset": "threat_score"},
+		},
+		{
+			ID:         "test_load_module_from_file",
 			Expression: fmt.Sprintf(`load_module.name == "%s" && load_module.file.path == "%s" && load_module.loaded_from_memory == false && load_module.args == "" && !process.is_kworker`, testModuleName, modulePath),
+			Tags:       map[string]string{"ruleset": "threat_score"},
 		},
 		{
 			ID:         "test_load_module_kworker",
 			Expression: `load_module.name == "xt_LED" && process.is_kworker`,
+			Tags:       map[string]string{"ruleset": "threat_score"},
 		},
 		{
 			ID:         "test_load_module_with_params",
 			Expression: fmt.Sprintf(`load_module.name == "%s" && load_module.argv in ["toto=1"]`, testModuleName),
+			Tags:       map[string]string{"ruleset": "threat_score"},
 		},
 		{
 			ID:         "test_load_module_with_truncated_params",
 			Expression: fmt.Sprintf(`load_module.name == "%s" && load_module.argv in ["Lorem"]`, testModuleName),
-		},
-		{
-			ID:         "test_load_module_with_params_from_memory",
-			Expression: fmt.Sprintf(`load_module.name == "%s" && load_module.argv in ["toto=5"] && load_module.loaded_from_memory == true`, testModuleName),
+			Tags:       map[string]string{"ruleset": "threat_score"},
 		},
 	}
 
@@ -156,7 +167,7 @@ func TestLoadModule(t *testing.T) {
 	defer test.Close()
 
 	t.Run("init_module", func(t *testing.T) {
-		test.WaitSignal(t, func() error {
+		test.WaitSignals(t, func() error {
 			module, err := os.ReadFile(modulePath)
 			if err != nil {
 				return fmt.Errorf("couldn't load module content: %w", err)
@@ -167,8 +178,8 @@ func TestLoadModule(t *testing.T) {
 			}
 
 			return unix.DeleteModule(testModuleName, 0)
-		}, func(event *model.Event, r *rules.Rule) {
-			assert.Equal(t, "test_load_module_from_memory", r.ID, "invalid rule triggered")
+		}, func(event *model.Event, r *rules.Rule) error {
+			assertPassedRule(t, event, "test_load_module_from_memory")
 
 			value, _ := event.GetFieldValue("event.async")
 			assert.Equal(t, value.(bool), false)
@@ -179,11 +190,12 @@ func TestLoadModule(t *testing.T) {
 			assert.Empty(t, event.LoadModule.Argv, "shouldn't get args")
 
 			test.validateLoadModuleNoFileSchema(t, event)
+			return nil
 		})
 	})
 
 	t.Run("finit_module", func(t *testing.T) {
-		test.WaitSignal(t, func() error {
+		test.WaitSignals(t, func() error {
 			f, err := os.Open(modulePath)
 			if err != nil {
 				return fmt.Errorf("couldn't open module: %w", err)
@@ -195,11 +207,11 @@ func TestLoadModule(t *testing.T) {
 			}
 
 			return unix.DeleteModule(testModuleName, 0)
-		}, func(event *model.Event, r *rules.Rule) {
-			assert.Equal(t, "test_load_module", r.ID, "invalid rule triggered")
-
-			test.validateLoadModuleSchema(t, event)
-		})
+		}, test.filterRule("test_load_module_from_file"),
+			func(event *model.Event, r *rules.Rule) error {
+				test.validateLoadModuleSchema(t, event)
+				return nil
+			})
 	})
 
 	t.Run("kworker", func(t *testing.T) {
@@ -212,12 +224,19 @@ func TestLoadModule(t *testing.T) {
 
 		defer func() {
 			cmd := exec.Command("iptables", "-D", "INPUT", "-p", "tcp", "--dport", "2222", "-j", "LED", "--led-trigger-id", "123")
-			_ = cmd.Run()
-			_ = unix.DeleteModule("xt_LED", 0)
+			if err := cmd.Run(); err != nil {
+				t.Error(err)
+			}
+
+			if err := retry.Do(func() error { return unix.DeleteModule("xt_LED", 0) }); err != nil {
+				t.Error(err)
+			}
 		}()
 
-		test.WaitSignal(t, func() error {
-			_ = unix.DeleteModule("xt_LED", 0)
+		test.WaitSignals(t, func() error {
+			if err := unix.DeleteModule("xt_LED", 0); err != nil {
+				return err
+			}
 
 			cmd := exec.Command("iptables", "-A", "INPUT", "-p", "tcp", "--dport", "2222", "-j", "LED", "--led-trigger-id", "123")
 			if err := cmd.Run(); err != nil {
@@ -225,13 +244,11 @@ func TestLoadModule(t *testing.T) {
 			}
 
 			return nil
-		}, func(event *model.Event, r *rules.Rule) {
-			assert.Equal(t, "test_load_module_kworker", r.ID, "invalid rule triggered")
-		})
+		}, test.filterRule("test_load_module_kworker"))
 	})
 
 	t.Run("load_module_with_params", func(t *testing.T) {
-		test.WaitSignal(t, func() error {
+		test.WaitSignals(t, func() error {
 			f, err := os.Open(modulePath)
 			if err != nil {
 				return fmt.Errorf("couldn't open module: %w", err)
@@ -242,17 +259,18 @@ func TestLoadModule(t *testing.T) {
 				return fmt.Errorf("couldn't insert module: %w", err)
 			}
 			return unix.DeleteModule(testModuleName, 0)
-		}, func(event *model.Event, r *rules.Rule) {
-			assert.Equal(t, "test_load_module_with_params", r.ID, "wrong rule triggered")
-			assertFieldEqual(t, event, "load_module.args", "toto=1 toto=2 toto=3")
-			assertFieldEqual(t, event, "load_module.loaded_from_memory", false)
-			assertFieldEqual(t, event, "load_module.args_truncated", false)
-			test.validateLoadModuleSchema(t, event)
-		})
+		}, test.filterRule("test_load_module_with_params"),
+			func(event *model.Event, r *rules.Rule) error {
+				assertFieldEqual(t, event, "load_module.args", "toto=1 toto=2 toto=3")
+				assertFieldEqual(t, event, "load_module.loaded_from_memory", false)
+				assertFieldEqual(t, event, "load_module.args_truncated", false)
+				test.validateLoadModuleSchema(t, event)
+				return nil
+			})
 	})
 
-	t.Run("load_module_with_params_from_memory", func(t *testing.T) {
-		test.WaitSignal(t, func() error {
+	t.Run("load_module_from_memory_with_params", func(t *testing.T) {
+		test.WaitSignals(t, func() error {
 			module, err := os.ReadFile(modulePath)
 			if err != nil {
 				return fmt.Errorf("couldn't load module content: %w", err)
@@ -263,17 +281,18 @@ func TestLoadModule(t *testing.T) {
 			}
 
 			return unix.DeleteModule(testModuleName, 0)
-		}, func(event *model.Event, r *rules.Rule) {
-			assert.Equal(t, "test_load_module_with_params_from_memory", r.ID, "wrong rule triggered")
-			assertFieldEqual(t, event, "load_module.argv", []string{"toto=5"})
-			assertFieldEqual(t, event, "load_module.loaded_from_memory", true)
-			assertFieldEqual(t, event, "load_module.args_truncated", false)
-			test.validateLoadModuleSchema(t, event)
-		})
+		}, test.filterRule("test_load_module_from_memory_with_params"),
+			func(event *model.Event, r *rules.Rule) error {
+				assertFieldEqual(t, event, "load_module.argv", []string{"toto=5"})
+				assertFieldEqual(t, event, "load_module.loaded_from_memory", true)
+				assertFieldEqual(t, event, "load_module.args_truncated", false)
+				test.validateLoadModuleSchema(t, event)
+				return nil
+			})
 	})
 
 	t.Run("load_module_with_truncated_params", func(t *testing.T) {
-		test.WaitSignal(t, func() error {
+		test.WaitSignals(t, func() error {
 			module, err := os.ReadFile(modulePath)
 			if err != nil {
 				return fmt.Errorf("couldn't load module content: %w", err)
@@ -284,14 +303,15 @@ func TestLoadModule(t *testing.T) {
 			}
 
 			return unix.DeleteModule(testModuleName, 0)
-		}, func(event *model.Event, r *rules.Rule) {
-			assert.Equal(t, "test_load_module_with_truncated_params", r.ID, "wrong rule triggered")
-			assertFieldEqual(t, event, "load_module.argv", []string{"Lorem", "ipsum", "dolor", "sit", "amet,", "consectetur", "adipiscing", "elit.", "Duis", "in", "luctus", "quam.", "Nam", "purus", "risus,", "varius", "non", "massa", "bibendum,"})
-			assertFieldEqual(t, event, "load_module.args", "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Duis in luctus quam. Nam purus risus, varius non massa bibendum,")
-			assertFieldEqual(t, event, "load_module.loaded_from_memory", true)
-			assertFieldEqual(t, event, "load_module.args_truncated", true)
-			test.validateLoadModuleSchema(t, event)
-		})
+		}, test.filterRule("test_load_module_with_truncated_params"),
+			func(event *model.Event, r *rules.Rule) error {
+				assertFieldEqual(t, event, "load_module.argv", []string{"Lorem", "ipsum", "dolor", "sit", "amet,", "consectetur", "adipiscing", "elit.", "Duis", "in", "luctus", "quam.", "Nam", "purus", "risus,", "varius", "non", "massa", "bibendum,"})
+				assertFieldEqual(t, event, "load_module.args", "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Duis in luctus quam. Nam purus risus, varius non massa bibendum,")
+				assertFieldEqual(t, event, "load_module.loaded_from_memory", true)
+				assertFieldEqual(t, event, "load_module.args_truncated", true)
+				test.validateLoadModuleSchema(t, event)
+				return nil
+			})
 	})
 }
 
