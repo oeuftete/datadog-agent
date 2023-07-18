@@ -186,6 +186,18 @@ func (d *dispatcher) rebalance() []types.RebalanceResponse {
 	diffMap, weights := d.getDiffAndWeights(totalAvg)
 	sort.Sort(weights)
 
+	log.Warnf("Rebalance - Average: %d", totalAvg)
+	log.Warnf("Rebalance - DiffMap: %+v", diffMap)
+	log.Warnf("Rebalance - Weights: %+v", weights)
+
+	for _, node := range d.store.nodes {
+		log.Warnf("Rebalance - Stats for node %s", node.name)
+		for check, stats := range node.clcRunnerStats {
+			log.Warnf("Rebalance - busyness for check %s: %d", check, busynessFunc(stats))
+		}
+		log.Warnf("Rebalance - End stats for node %s", node.name)
+	}
+
 	for _, nodeWeight := range weights {
 		for diffMap[nodeWeight.nodeName] > 0 {
 			// try to move checks from a node only of the node busyness is above the average
