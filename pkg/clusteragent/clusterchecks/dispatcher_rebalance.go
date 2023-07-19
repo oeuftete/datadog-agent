@@ -199,18 +199,26 @@ func (d *dispatcher) rebalance() []types.RebalanceResponse {
 	}
 
 	for _, nodeWeight := range weights {
+		log.Warnf("Rebalance - Iterate - Node: %s, Busyness: %d", nodeWeight.nodeName, nodeWeight.busyness)
+
 		for diffMap[nodeWeight.nodeName] > 0 {
+			log.Warnf("Rebalance - Node is above average")
+
 			// try to move checks from a node only of the node busyness is above the average
 			sourceNodeName := nodeWeight.nodeName
 			checkID, checkWeight, err := d.pickCheckToMove(sourceNodeName)
 			if err != nil {
-				log.Debugf("Cannot pick a check to move from node %s: %v", sourceNodeName, err)
+				log.Warnf("Cannot pick a check to move from node %s: %v", sourceNodeName, err)
 				break
 			}
+
+			log.Warnf("Rebalance - Check ID to move: %s with weight: %d", checkID, checkWeight)
 
 			destNodeName := pickNode(diffMap, sourceNodeName)
 			sourceDiff := diffMap[sourceNodeName]
 			destDiff := diffMap[destNodeName]
+
+			log.Warnf("Rebalance - Dest node: %s, sourceDiff: %d, destDiff: %d", destNodeName, sourceDiff, destDiff)
 
 			// move a check to a new node only if it keeps the
 			// busyness of the new node lower than the original
@@ -218,10 +226,12 @@ func (d *dispatcher) rebalance() []types.RebalanceResponse {
 			// value the toleration margin is used to lean towards
 			// stability over perfectly optimal balance
 			if destDiff+checkWeight < int(float64(sourceDiff)*tolerationMargin) {
+				log.Warnf("Rebalance - Decided to move check")
+
 				rebalancingDecisions.Inc(le.JoinLeaderValue)
 				err = d.moveCheck(sourceNodeName, destNodeName, checkID)
 				if err != nil {
-					log.Debugf("Cannot move check %s: %v", checkID, err)
+					log.Warnf("Cannot move check %s: %v", checkID, err)
 					continue
 				}
 
@@ -242,6 +252,8 @@ func (d *dispatcher) rebalance() []types.RebalanceResponse {
 				break
 			}
 		}
+
+		log.Warnf("Rebalance - Iterate end Node: %s", nodeWeight.nodeName)
 	}
 
 	return checksMoved
