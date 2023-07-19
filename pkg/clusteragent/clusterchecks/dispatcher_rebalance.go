@@ -201,9 +201,7 @@ func (d *dispatcher) rebalance() []types.RebalanceResponse {
 	for _, nodeWeight := range weights {
 		log.Warnf("Rebalance - Iterate - Node: %s, Busyness: %d", nodeWeight.nodeName, nodeWeight.busyness)
 
-		for diffMap[nodeWeight.nodeName] > 0 {
-			log.Warnf("Rebalance - Node is above average")
-
+		for true {
 			// try to move checks from a node only of the node busyness is above the average
 			sourceNodeName := nodeWeight.nodeName
 			checkID, checkWeight, err := d.pickCheckToMove(sourceNodeName)
