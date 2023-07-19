@@ -15,6 +15,7 @@ package probe
  * the numbers with explicit comments are validated by trial and error.
  * remainder found here under the table "Value of CrashDumpEnabled"
  * https://crashdmp.wordpress.com/crash-mechanism/configuration/
+ *
  */
 const (
 	DumpTypeUnknown      = int(-1)
