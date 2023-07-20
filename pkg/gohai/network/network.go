@@ -38,43 +38,27 @@ type Interface struct {
 }
 
 type Info struct {
-	// interfaces utils.Value[]
+	Interfaces  []Interface         `json:"interfaces"`
+	MacAddress  string              `json:"macaddress"`
+	IPAddress   string              `json:"ipaddress"`
+	IPAddressV6 utils.Value[string] `json:"ipaddressv6"`
 }
 
 // Collect collects the Network information.
 // Returns an object which can be converted to a JSON or an error if nothing could be collected.
 // Tries to collect as much information as possible.
-func (network *Network) Collect() (result interface{}, err error) {
-	result, err = getNetworkInfo()
+func CollectInfo() (*Info, error) {
+	info := &Info{}
+	err := fillNetworkInfo(info)
 	if err != nil {
-		return
+		return info, err
 	}
 
 	interfaces, err := getMultiNetworkInfo()
 	if err == nil && len(interfaces) > 0 {
-		interfaceMap, ok := result.(map[string]interface{})
-		if !ok {
-			return
-		}
-		interfaceMap["interfaces"] = interfaces
+		info.Interfaces = interfaces
 	}
-	return
-}
-
-// Get returns a Network struct already initialized, a list of warnings and an error. The method will try to collect as much
-// metadata as possible, an error is returned if nothing could be collected. The list of warnings contains errors if
-// some metadata could not be collected.
-func Get() (*Network, []string, error) {
-	networkInfo, err := getNetworkInfo()
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return &Network{
-		IpAddress:   utils.GetStringInterface(networkInfo, "ipaddress"),
-		IpAddressv6: utils.GetStringInterface(networkInfo, "ipaddressv6"),
-		MacAddress:  utils.GetStringInterface(networkInfo, "macaddress"),
-	}, nil, nil
+	return info, err
 }
 
 func getMultiNetworkInfo() ([]Interface, error) {
@@ -237,29 +221,30 @@ func macAddress() (string, error) {
 	return "", errors.New("not connected to the network")
 }
 
-func getNetworkInfo() (networkInfo map[string]interface{}, err error) {
-	networkInfo = make(map[string]interface{})
-
+func fillNetworkInfo(networkInfo *Info) error {
 	macaddress, err := macAddress()
 	if err != nil {
-		return networkInfo, err
+		return err
 	}
-	networkInfo["macaddress"] = macaddress
 
 	ipAddress, err := externalIPAddress()
 	if err != nil {
-		return networkInfo, err
+		return err
 	}
-	networkInfo["ipaddress"] = ipAddress
 
 	ipAddressV6, err := externalIpv6Address()
 	if err != nil {
-		return networkInfo, err
-	}
-	// We append an IPv6 address to the payload only if IPv6 is enabled
-	if ipAddressV6 != "" {
-		networkInfo["ipaddressv6"] = ipAddressV6
+		return err
 	}
 
-	return
+	networkInfo.MacAddress = macaddress
+	networkInfo.IPAddress = ipAddress
+	networkInfo.IPAddressV6 = utils.NewErrorValue[string](ErrAddressNotFound)
+
+	// We append an IPv6 address to the payload only if IPv6 is enabled
+	if ipAddressV6 != "" {
+		networkInfo.IPAddressV6 = utils.NewValue(ipAddressV6)
+	}
+
+	return nil
 }
