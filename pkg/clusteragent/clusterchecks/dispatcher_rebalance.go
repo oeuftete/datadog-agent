@@ -9,6 +9,7 @@ package clusterchecks
 
 import (
 	"fmt"
+	"math"
 	"sort"
 	"time"
 
@@ -21,6 +22,8 @@ import (
 // by moving a check from a node to another if destNodeBusyness + checkWeight < srcNodeBusyness*tolerationMargin
 // the 0.9 value is tentative and could be changed
 const tolerationMargin float64 = 0.9
+
+const minPercentageImprovement float64 = 5
 
 // Weight holds a node name and the corresponding busyness score
 type Weight struct {
@@ -164,6 +167,7 @@ func (d *dispatcher) moveCheck(src, dest, checkID string) error {
 	return nil
 }
 
+/*
 // rebalance tries to optimize the checks repartition on cluster level check
 // runners with less possible check moves based on the runner stats.
 func (d *dispatcher) rebalance() []types.RebalanceResponse {
@@ -252,6 +256,217 @@ func (d *dispatcher) rebalance() []types.RebalanceResponse {
 		}
 
 		log.Warnf("Rebalance - Iterate end Node: %s", nodeWeight.nodeName)
+	}
+
+	return checksMoved
+}
+*/
+
+type checksDistribution struct {
+	checkPlacement   map[string]string // checkID => node name
+	checkBusyness    map[string]int
+	nodeBusyness     map[string]int
+	numChecksPerNode map[string]int
+}
+
+func newChecksDistribution() checksDistribution {
+	return checksDistribution{
+		checkPlacement:   map[string]string{},
+		checkBusyness:    map[string]int{},
+		nodeBusyness:     map[string]int{},
+		numChecksPerNode: map[string]int{},
+	}
+}
+
+func (distribution *checksDistribution) leastBusyNode(preferredNode string) string {
+	leastBusyNode := ""
+	minBusyness := 0
+	numChecksLeastBusyNode := 0
+
+	for nodeName, nodeBusyness := range distribution.nodeBusyness {
+		selectNode := leastBusyNode == "" ||
+			nodeBusyness < minBusyness ||
+			nodeBusyness == minBusyness && nodeName == preferredNode ||
+			nodeBusyness == minBusyness && distribution.numChecksPerNode[nodeName] < numChecksLeastBusyNode
+
+		if selectNode {
+			leastBusyNode = nodeName
+			minBusyness = nodeBusyness
+			numChecksLeastBusyNode = distribution.numChecksPerNode[nodeName]
+		}
+	}
+
+	return leastBusyNode
+}
+
+// Note: if there are several nodes with the same busyness and preferredNode is among them, add the check to it.
+func (distribution *checksDistribution) addToLeastBusy(checkID string, checkBusyness int, preferredNode string) {
+	leastBusy := distribution.leastBusyNode(preferredNode)
+	if leastBusy == "" {
+		return
+	}
+
+	distribution.checkPlacement[checkID] = leastBusy
+	distribution.checkBusyness[checkID] = checkBusyness
+	distribution.nodeBusyness[leastBusy] += checkBusyness
+	distribution.numChecksPerNode[leastBusy] += 1
+}
+
+func (distribution *checksDistribution) addNode(nodeName string) {
+	distribution.nodeBusyness[nodeName] = 0
+	distribution.numChecksPerNode[nodeName] = 0
+}
+
+func (distribution *checksDistribution) nodeForCheck(checkID string) string {
+	return distribution.checkPlacement[checkID]
+}
+
+func (distribution *checksDistribution) busynessForCheck(checkID string) int {
+	return distribution.checkBusyness[checkID]
+}
+
+func (distribution *checksDistribution) nodes() []string {
+	var nodes []string
+
+	for node := range distribution.nodeBusyness {
+		nodes = append(nodes, node)
+	}
+
+	return nodes
+}
+
+func (distribution *checksDistribution) checksSortedByBusyness() []string {
+	var checks []struct {
+		checkID  string
+		busyness int
+	}
+
+	for checkID, checkBusyness := range distribution.checkBusyness {
+		checks = append(checks, struct {
+			checkID  string
+			busyness int
+		}{
+			checkID:  checkID,
+			busyness: checkBusyness,
+		})
+	}
+
+	sort.Slice(checks, func(i, j int) bool {
+		return checks[i].busyness > checks[j].busyness
+	})
+
+	var res []string
+	for _, check := range checks {
+		res = append(res, check.checkID)
+	}
+	return res
+}
+
+func (distribution *checksDistribution) busynessStdDev() float64 {
+	totalBusyness := 0
+	for _, nodeBusyness := range distribution.nodeBusyness {
+		totalBusyness += nodeBusyness
+	}
+
+	meanBusyness := float64(totalBusyness) / float64(len(distribution.nodeBusyness))
+
+	sumSquaredDeviations := 0.0
+	for _, nodeBusyness := range distribution.nodeBusyness {
+		sumSquaredDeviations += math.Pow(float64(nodeBusyness)-meanBusyness, 2)
+	}
+
+	variance := sumSquaredDeviations / float64(len(distribution.nodeBusyness))
+
+	return math.Sqrt(variance)
+}
+
+func (d *dispatcher) currentDistribution() checksDistribution {
+	distribution := newChecksDistribution()
+
+	d.store.Lock()
+	defer d.store.Unlock()
+	for nodeName, nodeStoreInfo := range d.store.nodes {
+		for checkID, stats := range nodeStoreInfo.clcRunnerStats {
+			if !stats.IsClusterCheck {
+				continue
+			}
+
+			checkBusyness := busynessFunc(stats)
+
+			distribution.checkPlacement[checkID] = nodeName
+			distribution.checkBusyness[checkID] = checkBusyness
+			distribution.nodeBusyness[nodeName] += checkBusyness
+			distribution.numChecksPerNode[nodeName] += 1
+		}
+	}
+
+	return distribution
+}
+
+// rebalance tries to optimize the checks repartition on cluster level check
+// runners with less possible check moves based on the runner stats.
+func (d *dispatcher) rebalance() []types.RebalanceResponse {
+	var checksMoved []types.RebalanceResponse
+
+	// Collect CLC runners stats and update cache before rebalancing
+	d.updateRunnersStats()
+
+	start := time.Now()
+	defer func() {
+		rebalancingDuration.Set(time.Since(start).Seconds(), le.JoinLeaderValue)
+	}()
+
+	currentChecksDistribution := d.currentDistribution()
+	proposedDistribution := newChecksDistribution()
+
+	for _, nodeName := range currentChecksDistribution.nodes() {
+		proposedDistribution.addNode(nodeName)
+	}
+
+	for _, checkID := range currentChecksDistribution.checksSortedByBusyness() {
+		proposedDistribution.addToLeastBusy(checkID, currentChecksDistribution.busynessForCheck(checkID), currentChecksDistribution.nodeForCheck(checkID))
+	}
+
+	// TODO: improve logging
+	log.Warnf("Rebalance - current distribution: %v", currentChecksDistribution)
+	log.Warnf("Rebalance - current distribution stddev: %f", currentChecksDistribution.busynessStdDev())
+	log.Warnf("Rebalance - proposed distribution: %v", proposedDistribution)
+	log.Warnf("Rebalance - proposed distribution stddev: %f", proposedDistribution.busynessStdDev())
+
+	// We don't calculate the optimal distribution, so it might be worse than
+	// the current one.
+	maxStdDev := currentChecksDistribution.busynessStdDev() * ((100 - minPercentageImprovement) / 100)
+	if proposedDistribution.busynessStdDev() > maxStdDev {
+		log.Warnf("Didn't find a distribution that improves the current one at least by %.1f %%", minPercentageImprovement)
+		return nil
+	}
+
+	for checkID, proposedNode := range proposedDistribution.checkPlacement {
+		currentNode := currentChecksDistribution.nodeForCheck(checkID)
+
+		if proposedNode == currentNode {
+			continue
+		}
+
+		rebalancingDecisions.Inc(le.JoinLeaderValue)
+
+		err := d.moveCheck(currentNode, proposedNode, checkID)
+		if err != nil {
+			log.Warnf("Cannot move check %s: %v", checkID, err)
+			continue
+		}
+
+		successfulRebalancing.Inc(le.JoinLeaderValue)
+
+		checksMoved = append(
+			checksMoved,
+			types.RebalanceResponse{
+				CheckID:        checkID,
+				CheckWeight:    currentChecksDistribution.busynessForCheck(checkID),
+				SourceNodeName: currentNode,
+				DestNodeName:   proposedNode,
+			},
+		)
 	}
 
 	return checksMoved
