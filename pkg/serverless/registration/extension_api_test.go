@@ -91,7 +91,7 @@ func TestRegisterSuccess(t *testing.T) {
 
 	baseRuntime := strings.Replace(ts.URL, "http://", "", 1)
 	t.Setenv("AWS_LAMBDA_RUNTIME_API", baseRuntime)
-	id, err := RegisterExtension(baseRuntime, "/myRoute", registerExtensionTimeout)
+	id, err := RegisterExtension("/myRoute", registerExtensionTimeout)
 
 	assert.Equal(t, "myGeneratedId", id.String())
 	assert.Nil(t, err)
@@ -106,7 +106,7 @@ func TestRegisterErrorNoExtensionId(t *testing.T) {
 	defer ts.Close()
 
 	t.Setenv("AWS_LAMBDA_RUNTIME_API", ts.URL)
-	id, err := RegisterExtension(strings.Replace(ts.URL, "http://", "", 1), "", registerExtensionTimeout)
+	id, err := RegisterExtension("", registerExtensionTimeout)
 
 	assert.Empty(t, id.String())
 	assert.NotNil(t, err)
@@ -120,14 +120,14 @@ func TestRegisterErrorHttp(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	id, err := RegisterExtension(strings.Replace(ts.URL, "http://", "", 1), "", registerExtensionTimeout)
+	id, err := RegisterExtension("", registerExtensionTimeout)
 
 	assert.Empty(t, id.String())
 	assert.NotNil(t, err)
 }
 
 func TestRegisterErrorTimeout(t *testing.T) {
-	id, err := RegisterExtension(":invalidURL:", "", registerExtensionTimeout)
+	id, err := RegisterExtension("", registerExtensionTimeout)
 	assert.Empty(t, id.String())
 	assert.NotNil(t, err)
 }
@@ -140,14 +140,14 @@ func TestRegisterErrorBuildRequest(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	id, err := RegisterExtension(ts.URL, "", registerExtensionTimeout)
+	id, err := RegisterExtension("", registerExtensionTimeout)
 
 	assert.Empty(t, id.String())
 	assert.NotNil(t, err)
 }
 
 func TestRegisterInvalidUrl(t *testing.T) {
-	id, err := RegisterExtension(":inv al id:", "", registerExtensionTimeout)
+	id, err := RegisterExtension("", registerExtensionTimeout)
 	assert.Empty(t, id.String())
 	assert.NotNil(t, err)
 }
