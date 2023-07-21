@@ -43,6 +43,7 @@ CI_PROJECT_DIR = os.environ.get("CI_PROJECT_DIR", ".")
 KITCHEN_DIR = os.getenv('DD_AGENT_TESTING_DIR') or os.path.normpath(os.path.join(os.getcwd(), "test", "kitchen"))
 KITCHEN_ARTIFACT_DIR = os.path.join(KITCHEN_DIR, "site-cookbooks", "dd-security-agent-check", "files")
 STRESS_TEST_SUITE = "stresssuite"
+SHARED_TEST_SUITE = "shared_test_suite"
 
 
 @task(iterable=["build_tags"])
@@ -356,6 +357,27 @@ def build_stress_tests(
         arch=arch,
         major_version=major_version,
         build_tags='stresstests',
+        bundle_ebpf=bundle_ebpf,
+        skip_linters=skip_linters,
+        kernel_release=kernel_release,
+    )
+
+@task
+def build_shared_tests(
+    ctx,
+    output=f"pkg/security/tests/{SHARED_TEST_SUITE}",
+    arch=CURRENT_ARCH,
+    major_version='7',
+    bundle_ebpf=True,
+    skip_linters=False,
+    kernel_release=None,
+):
+    build_functional_tests(
+        ctx,
+        output=output,
+        arch=arch,
+        major_version=major_version,
+        build_tags='shared',
         bundle_ebpf=bundle_ebpf,
         skip_linters=skip_linters,
         kernel_release=kernel_release,
