@@ -23,9 +23,9 @@ import (
 	manager "github.com/DataDog/ebpf-manager"
 
 	"github.com/DataDog/datadog-agent/pkg/network/config"
+	"github.com/DataDog/datadog-agent/pkg/network/protocols"
 	"github.com/DataDog/datadog-agent/pkg/network/protocols/http"
 	"github.com/DataDog/datadog-agent/pkg/network/protocols/tls/java"
-	nettelemetry "github.com/DataDog/datadog-agent/pkg/network/telemetry"
 	"github.com/DataDog/datadog-agent/pkg/process/monitor"
 	"github.com/DataDog/datadog-agent/pkg/process/util"
 	"github.com/DataDog/datadog-agent/pkg/util/log"
@@ -71,18 +71,23 @@ var (
 	javaAgentBlockRegex *regexp.Regexp
 )
 
-type JavaTLSProgram struct {
-	cfg            *config.Config
-	manager        *nettelemetry.Manager
-	processMonitor *monitor.ProcessMonitor
-	cleanupExec    func()
-}
-
-// Static evaluation to make sure we are not breaking the interface.
-var _ subprogram = &JavaTLSProgram{}
-
-func GetJavaTlsTailCallRoutes() []manager.TailCallRoute {
-	return []manager.TailCallRoute{
+var javaTLSProgramSpec = protocols.ProgramSpec{
+	Factory: newJavaTLSProgram,
+	Maps: []*manager.Map{
+		{
+			Name: javaTLSConnectionsMap,
+		},
+	},
+	Probes: []*manager.Probe{
+		{
+			ProbeIdentificationPair: manager.ProbeIdentificationPair{
+				EBPFFuncName: "kprobe__do_vfs_ioctl",
+				UID:          probeUID,
+			},
+			KProbeMaxActive: maxActive,
+		},
+	},
+	TailCalls: []manager.TailCallRoute{
 		{
 			ProgArrayName: eRPCHandlersMap,
 			Key:           SyncPayload,
@@ -111,7 +116,13 @@ func GetJavaTlsTailCallRoutes() []manager.TailCallRoute {
 				EBPFFuncName: "kprobe_handle_async_payload",
 			},
 		},
-	}
+	},
+}
+
+type javaTLSProgram struct {
+	cfg            *config.Config
+	processMonitor *monitor.ProcessMonitor
+	cleanupExec    func()
 }
 
 func IsJavaSubprogramEnabled(c *config.Config) bool {
@@ -129,15 +140,14 @@ func IsJavaSubprogramEnabled(c *config.Config) bool {
 	return true
 }
 
-func newJavaTLSProgram(c *config.Config) *JavaTLSProgram {
-	var err error
-
+func newJavaTLSProgram(c *config.Config) (protocols.EbpfProgram, error) {
 	if !IsJavaSubprogramEnabled(c) {
 		log.Info("java tls is not enabled")
-		return nil
+		return nil, nil
 	}
 
 	log.Info("java tls is enabled")
+	var err error
 	javaUSMAgentDebug = c.JavaAgentDebug
 	javaUSMAgentArgs = c.JavaAgentArgs
 	javaAgentAllowRegex = nil
@@ -157,69 +167,49 @@ func newJavaTLSProgram(c *config.Config) *JavaTLSProgram {
 		}
 	}
 
-	mon := monitor.GetProcessMonitor()
-	return &JavaTLSProgram{
-		cfg:            c,
-		processMonitor: mon,
-	}
-}
-
-func (p *JavaTLSProgram) Name() string {
-	return "java-tls"
-}
-
-func (p *JavaTLSProgram) IsBuildModeSupported(buildMode) bool {
-	return true
-}
-
-func (p *JavaTLSProgram) ConfigureManager(m *nettelemetry.Manager) {
-	p.manager = m
-	p.manager.Maps = append(p.manager.Maps, []*manager.Map{
-		{Name: javaTLSConnectionsMap},
-	}...)
-
-	p.manager.Probes = append(m.Probes,
-		&manager.Probe{ProbeIdentificationPair: manager.ProbeIdentificationPair{
-			EBPFFuncName: "kprobe__do_vfs_ioctl",
-			UID:          probeUID,
-		},
-			KProbeMaxActive: maxActive,
-		},
-	)
 	rand.Seed(int64(os.Getpid()) + time.Now().UnixMicro())
 	authID = rand.Int63()
+
+	return &javaTLSProgram{
+		cfg:            c,
+		processMonitor: monitor.GetProcessMonitor(),
+	}, nil
 }
 
-func (p *JavaTLSProgram) ConfigureOptions(options *manager.Options) {
+func (p *javaTLSProgram) ConfigureOptions(_ *manager.Manager, options *manager.Options) {
 	options.MapSpecEditors[javaTLSConnectionsMap] = manager.MapSpecEditor{
 		Type:       ebpf.Hash,
 		MaxEntries: p.cfg.MaxTrackedConnections,
 		EditorFlag: manager.EditMaxEntries,
 	}
+
 	options.MapSpecEditors[javaDomainsToConnectionsMap] = manager.MapSpecEditor{
 		Type:       ebpf.Hash,
-		MaxEntries: uint32(p.cfg.MaxTrackedConnections),
+		MaxEntries: p.cfg.MaxTrackedConnections,
 		EditorFlag: manager.EditMaxEntries,
 	}
-
-	options.ActivatedProbes = append(options.ActivatedProbes,
-		&manager.ProbeSelector{
-			ProbeIdentificationPair: manager.ProbeIdentificationPair{
-				EBPFFuncName: "kprobe__do_vfs_ioctl",
-				UID:          probeUID,
-			},
-		})
 }
 
-func (p *JavaTLSProgram) GetAllUndefinedProbes() []manager.ProbeIdentificationPair {
-	return []manager.ProbeIdentificationPair{
-		{EBPFFuncName: "kprobe__do_vfs_ioctl"},
-		{EBPFFuncName: "kprobe_handle_sync_payload"},
-		{EBPFFuncName: "kprobe_handle_close_connection"},
-		{EBPFFuncName: "kprobe_handle_connection_by_peer"},
-		{EBPFFuncName: "kprobe_handle_async_payload"},
+func (p *javaTLSProgram) PreStart(*manager.Manager) error {
+	p.cleanupExec = p.processMonitor.SubscribeExec(newJavaProcess)
+	return nil
+}
+
+func (p *javaTLSProgram) PostStart(*manager.Manager) error {
+	return nil
+}
+
+func (p *javaTLSProgram) Stop(*manager.Manager) {
+	if p.cleanupExec != nil {
+		p.cleanupExec()
+	}
+
+	if p.processMonitor != nil {
+		p.processMonitor.Stop()
 	}
 }
+
+func (p *javaTLSProgram) DumpMaps(*strings.Builder, string, *ebpf.Map) {}
 
 // isJavaProcess checks if the given PID comm's name is java.
 // The method is much faster and efficient that using process.NewProcess(pid).Name().
@@ -305,19 +295,5 @@ func newJavaProcess(pid int) {
 	args := strings.Join(allArgs, ",")
 	if err := java.InjectAgent(pid, javaUSMAgentJarPath, args); err != nil {
 		log.Error(err)
-	}
-}
-
-func (p *JavaTLSProgram) Start() {
-	p.cleanupExec = p.processMonitor.SubscribeExec(newJavaProcess)
-}
-
-func (p *JavaTLSProgram) Stop() {
-	if p.cleanupExec != nil {
-		p.cleanupExec()
-	}
-
-	if p.processMonitor != nil {
-		p.processMonitor.Stop()
 	}
 }

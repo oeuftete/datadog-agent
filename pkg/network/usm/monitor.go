@@ -39,6 +39,14 @@ const (
 	NotRunning monitorState = "Not Running"
 )
 
+type eBPFProgramType string
+
+const (
+	javaTLSProgramKey eBPFProgramType = "java-tls"
+	goTLSProgramKey   eBPFProgramType = "go-tls"
+	openSSLProgramKey eBPFProgramType = "openssl"
+)
+
 var (
 	state        = Disabled
 	startupError error
@@ -49,6 +57,12 @@ var (
 		protocols.HTTP:  http.Spec,
 		protocols.HTTP2: http2.Spec,
 		protocols.Kafka: kafka.Spec,
+	}
+
+	// knownEBPFPrograms maps individual protocol types, to their specification,
+	// for the Monitor to use during its initialisation.
+	knownEBPFPrograms = map[eBPFProgramType]protocols.ProgramSpec{
+		javaTLSProgramKey: javaTLSProgramSpec,
 	}
 )
 
@@ -317,4 +331,50 @@ func initProtocols(c *config.Config, mgr *ebpfProgram) (map[protocols.ProtocolTy
 	}
 
 	return enabledProtocols, disabledProtocols, nil
+}
+
+// initPrograms takes the network configuration `c` and uses it to initialise
+// the enabled protocols' monitoring, and configures the ebpf-manager `mgr`
+// accordingly.
+//
+// For each enabled protocols, a protocol-specific instance of the Protocol
+// interface is initialised, and the required maps and tail calls routers are setup
+// in the manager.
+//
+// If a protocol is not enabled, its tail calls are instead added to the list of
+// excluded functions for them to be patched out by ebpf-manager on startup.
+//
+// It returns:
+// - a slice containing instances of the Protocol interface for each enabled protocol support
+// - a slice containing pointers to the protocol specs of disabled protocols.
+// - an error value, which is non-nil if an error occurred while initialising a protocol
+func initPrograms(c *config.Config, mgr *ebpfProgram) (map[eBPFProgramType]protocols.EbpfProgram, []*protocols.ProgramSpec, error) {
+	enabledPrograms := make(map[eBPFProgramType]protocols.EbpfProgram)
+	disabledPrograms := make([]*protocols.ProgramSpec, 0)
+
+	for progName, spec := range knownEBPFPrograms {
+		program, err := spec.Factory(c)
+		if err != nil {
+			return nil, nil, &errNotSupported{err}
+		}
+
+		if program != nil {
+			// Configure the manager
+			mgr.Maps = append(mgr.Maps, spec.Maps...)
+			mgr.Probes = append(mgr.Probes, spec.Probes...)
+			mgr.tailCallRouter = append(mgr.tailCallRouter, spec.TailCalls...)
+
+			enabledPrograms[progName] = program
+
+			log.Infof("%v monitoring enabled", program)
+		} else {
+			// As we're keeping pointers to the disables specs, we're suffering from a common golang-gotcha
+			// Assuming we have http and kafka, http is disabled, kafka is not. Without the following line we'll end up
+			// with enabledPrograms = [kafka] and disabledPrograms = [kafka].
+			spec := spec
+			disabledPrograms = append(disabledPrograms, &spec)
+		}
+	}
+
+	return enabledPrograms, disabledPrograms, nil
 }
