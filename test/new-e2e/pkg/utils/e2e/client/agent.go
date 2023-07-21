@@ -12,8 +12,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/DataDog/datadog-agent/test/new-e2e/runner"
-	"github.com/DataDog/datadog-agent/test/new-e2e/runner/parameters"
+	"github.com/DataDog/datadog-agent/test/new-e2e/pkg/runner"
+	"github.com/DataDog/datadog-agent/test/new-e2e/pkg/runner/parameters"
 	"github.com/DataDog/test-infra-definitions/components/datadog/agent"
 	e2eOs "github.com/DataDog/test-infra-definitions/components/os"
 	"github.com/cenkalti/backoff"
