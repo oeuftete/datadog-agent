@@ -15,7 +15,7 @@ import (
 	"os"
 	"path/filepath"
 
-	systemProbe "github.com/DataDog/datadog-agent/test/new-e2e/system-probe"
+	systemProbe "github.com/DataDog/datadog-agent/test/new-e2e/tests/system-probe"
 )
 
 var DD_AGENT_TESTING_DIR = os.Getenv("DD_AGENT_TESTING_DIR")
