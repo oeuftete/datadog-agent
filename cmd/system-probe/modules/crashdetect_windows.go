@@ -27,7 +27,7 @@ var WinCrashProbe = module.Factory{
 		log.Infof("Starting the WinCrashProbe probe")
 		cp, err := probe.NewWinCrashProbe(ebpf.NewConfig())
 		if err != nil {
-			return nil, fmt.Errorf("unable to start the BSOD probe: %w", err)
+			return nil, fmt.Errorf("unable to start the Windows Crash Detection probe: %w", err)
 		}
 		return &winCrashDetectModule{
 			WinCrashProbe: cp,
