@@ -52,5 +52,9 @@ func NewLogContext(logsConfig *logsconfig.LogsConfigKeys, endpointPrefix string,
 	destinationsCtx := client.NewDestinationsContext()
 	destinationsCtx.Start()
 
+	log.Debugf("[keisukelog] main endpoint: %#v", endpoints.Main)
+	for _, ep := range endpoints.Endpoints {
+		log.Debugf("[keisukelog] sub endpoint: %#v", ep)
+	}
 	return endpoints, destinationsCtx, nil
 }

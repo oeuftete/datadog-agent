@@ -17,6 +17,7 @@ import (
 	"github.com/DataDog/datadog-agent/pkg/logs/internal/processor"
 	"github.com/DataDog/datadog-agent/pkg/logs/message"
 	"github.com/DataDog/datadog-agent/pkg/logs/sender"
+	"github.com/DataDog/datadog-agent/pkg/util/log"
 )
 
 // Pipeline processes and sends messages to the backend
@@ -91,9 +92,18 @@ func (p *Pipeline) Flush(ctx context.Context) {
 	p.processor.Flush(ctx) // flush messages in the processor into the sender
 }
 
-func getDestinations(endpoints *config.Endpoints, destinationsContext *client.DestinationsContext, pipelineID int) *client.Destinations {
+func getDestinations(endpoints *config.Endpoints, destinationsContext *client.DestinationsContext, pipelineID int) (ds *client.Destinations) {
 	reliable := []client.Destination{}
 	additionals := []client.Destination{}
+
+	defer func() {
+		for _, d := range ds.Reliable {
+			log.Debugf("[keisukelog] reliable destination: %#v", d)
+		}
+		for _, d := range ds.Unreliable {
+			log.Debugf("[keisukelog] unreliable destination: %#v", d)
+		}
+	}()
 
 	if endpoints.UseHTTP {
 		for i, endpoint := range endpoints.GetReliableEndpoints() {
@@ -104,7 +114,8 @@ func getDestinations(endpoints *config.Endpoints, destinationsContext *client.De
 			telemetryName := fmt.Sprintf("logs_%d_unreliable_%d", pipelineID, i)
 			additionals = append(additionals, http.NewDestination(endpoint, http.JSONContentType, destinationsContext, endpoints.BatchMaxConcurrentSend, false, telemetryName))
 		}
-		return client.NewDestinations(reliable, additionals)
+		ds = client.NewDestinations(reliable, additionals)
+		return ds
 	}
 	for _, endpoint := range endpoints.GetReliableEndpoints() {
 		reliable = append(reliable, tcp.NewDestination(endpoint, endpoints.UseProto, destinationsContext, true))
@@ -112,7 +123,8 @@ func getDestinations(endpoints *config.Endpoints, destinationsContext *client.De
 	for _, endpoint := range endpoints.GetUnReliableEndpoints() {
 		additionals = append(additionals, tcp.NewDestination(endpoint, endpoints.UseProto, destinationsContext, false))
 	}
-	return client.NewDestinations(reliable, additionals)
+	ds = client.NewDestinations(reliable, additionals)
+	return ds
 }
 
 func getStrategy(inputChan chan *message.Message, outputChan chan *message.Payload, flushChan chan struct{}, endpoints *config.Endpoints, serverless bool, pipelineID int) sender.Strategy {

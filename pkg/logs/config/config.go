@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"net"
 	"net/url"
+	"runtime/debug"
 	"strconv"
 	"strings"
 	"time"
@@ -194,6 +195,7 @@ func BuildHTTPEndpointsWithVectorOverride(intakeTrackType IntakeTrackType, intak
 
 // BuildHTTPEndpointsWithConfig uses two arguments that instructs it how to access configuration parameters, then returns the HTTP endpoints to send logs to. This function is able to default to the 'classic' BuildHTTPEndpoints() w ldHTTPEndpointsWithConfigdefault variables logsConfigDefaultKeys and httpEndpointPrefix
 func BuildHTTPEndpointsWithConfig(logsConfig *LogsConfigKeys, endpointPrefix string, intakeTrackType IntakeTrackType, intakeProtocol IntakeProtocol, intakeOrigin IntakeOrigin) (*Endpoints, error) {
+	log.Debugf("[keisukelog] %s", debug.Stack())
 	// Provide default values for legacy settings when the configuration key does not exist
 	defaultNoSSL := logsConfig.logsNoSSL()
 
@@ -228,6 +230,7 @@ func BuildHTTPEndpointsWithConfig(logsConfig *LogsConfigKeys, endpointPrefix str
 		main.UseSSL = useSSL
 	} else if logsDDURL, logsDDURLDefined := logsConfig.logsDDURL(); logsDDURLDefined {
 		host, port, useSSL, err := parseAddressWithScheme(logsDDURL, defaultNoSSL, parseAddress)
+		log.Debugf("[keisukelog] logsDDURL: %s, host: %s, port: %d, useSSL: %v", logsDDURL, host, port, useSSL)
 		if err != nil {
 			return nil, fmt.Errorf("could not parse %s: %v", logsDDURL, err)
 		}
@@ -235,8 +238,11 @@ func BuildHTTPEndpointsWithConfig(logsConfig *LogsConfigKeys, endpointPrefix str
 		main.Port = port
 		main.UseSSL = useSSL
 	} else {
+		log.Debugf("[keisukelog] endpointPrefix: %s, logsConfig.getConfigKey(\"dd_url\"): %s", endpointPrefix, logsConfig.getConfigKey("dd_url"))
 		addr := utils.GetMainEndpoint(coreConfig.Datadog, endpointPrefix, logsConfig.getConfigKey("dd_url"))
+		log.Debugf("[keisukelog] addr: %s", addr)
 		host, port, useSSL, err := parseAddressWithScheme(addr, logsConfig.devModeNoSSL(), parseAddressAsHost)
+		log.Debugf("[keisukelog] host: %s, port: %d, useSSL: %v", host, port, useSSL)
 		if err != nil {
 			return nil, fmt.Errorf("could not parse %s: %v", logsDDURL, err)
 		}

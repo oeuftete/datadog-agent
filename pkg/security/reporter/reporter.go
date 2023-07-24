@@ -6,6 +6,7 @@
 package reporter
 
 import (
+	"runtime/debug"
 	"time"
 
 	pkgconfig "github.com/DataDog/datadog-agent/pkg/config"
@@ -18,6 +19,7 @@ import (
 	"github.com/DataDog/datadog-agent/pkg/logs/sources"
 	seccommon "github.com/DataDog/datadog-agent/pkg/security/common"
 	"github.com/DataDog/datadog-agent/pkg/status/health"
+	"github.com/DataDog/datadog-agent/pkg/util/log"
 	"github.com/DataDog/datadog-agent/pkg/util/startstop"
 )
 
@@ -27,10 +29,12 @@ type RuntimeReporter struct {
 }
 
 func (r *RuntimeReporter) ReportRaw(content []byte, service string, tags ...string) {
+	log.Debugf("[keisukelog] %s", debug.Stack())
 	origin := message.NewOrigin(r.logSource)
 	origin.SetTags(tags)
 	origin.SetService(service)
 	msg := message.NewMessage(content, origin, message.StatusInfo, time.Now().UnixNano())
+	log.Debugf("[keisukelog] message: %#v", msg)
 	r.logChan <- msg
 }
 
