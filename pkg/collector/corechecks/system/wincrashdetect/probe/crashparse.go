@@ -14,9 +14,10 @@ package probe
 import "C"
 import (
 	"fmt"
-
 	"strings"
 	"unsafe"
+	
+	"github.com/DataDog/datadog-agent/pkg/util/log"
 )
 
 type logCallbackContext struct {
@@ -78,8 +79,16 @@ func logLineCallback(voidctx C.PVOID, str C.PCSTR) {
 }
 func parseCrashDump(wcs *WinCrashStatus) {
 	var ctx logCallbackContext
+	var extendedError uint32
 
-	C.readCrashDump(C.CString(wcs.FileName), unsafe.Pointer(&ctx))
+	err := C.readCrashDump(C.CString(wcs.FileName), unsafe.Pointer(&ctx), (*C.long)(unsafe.Pointer(&extendedError)))
+
+	if err != C.RCD_NONE {
+		wcs.Success = false
+		wcs.ErrString = fmt.Sprintf("Failed to load crash dump file %d %x", int(err), extendedError)
+		log.Errorf("Failed to open crash dump %s: %d %x", wcs.FileName, int(err), extendedError)
+		return
+	}
 
 	if len(ctx.loglines) < 2 {
 		wcs.ErrString = fmt.Sprintf("Invalid crash dump file %s", wcs.FileName)
