@@ -241,9 +241,10 @@ func (d *Daemon) TriggerFlush(isLastFlushBeforeShutdown bool) {
 	timedOut := waitWithTimeout(&wg, FlushTimeout)
 	if timedOut {
 		log.Debug("Timed out while flushing")
-		d.flushStrategy.IncrementFailure(time.Now())
+		d.flushStrategy.Failure(time.Now())
 	} else {
 		log.Debug("Finished flushing")
+		d.flushStrategy.Success()
 	}
 	cancel()
 
