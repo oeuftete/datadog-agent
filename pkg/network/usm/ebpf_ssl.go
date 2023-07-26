@@ -51,6 +51,21 @@ var openSSLProbes = []manager.ProbesSelector{
 					EBPFFuncName: "uretprobe__SSL_write_ex",
 				},
 			},
+			&manager.ProbeSelector{
+				ProbeIdentificationPair: manager.ProbeIdentificationPair{
+					EBPFFuncName: "uprobe__SSL_connect",
+				},
+			},
+			&manager.ProbeSelector{
+				ProbeIdentificationPair: manager.ProbeIdentificationPair{
+					EBPFFuncName: "uretprobe__SSL_connect",
+				},
+			},
+			&manager.ProbeSelector{
+				ProbeIdentificationPair: manager.ProbeIdentificationPair{
+					EBPFFuncName: "uprobe__SSL_set_fd",
+				},
+			},
 		},
 	},
 	&manager.AllOf{
@@ -67,22 +82,7 @@ var openSSLProbes = []manager.ProbesSelector{
 			},
 			&manager.ProbeSelector{
 				ProbeIdentificationPair: manager.ProbeIdentificationPair{
-					EBPFFuncName: "uprobe__SSL_connect",
-				},
-			},
-			&manager.ProbeSelector{
-				ProbeIdentificationPair: manager.ProbeIdentificationPair{
-					EBPFFuncName: "uretprobe__SSL_connect",
-				},
-			},
-			&manager.ProbeSelector{
-				ProbeIdentificationPair: manager.ProbeIdentificationPair{
 					EBPFFuncName: "uprobe__SSL_set_bio",
-				},
-			},
-			&manager.ProbeSelector{
-				ProbeIdentificationPair: manager.ProbeIdentificationPair{
-					EBPFFuncName: "uprobe__SSL_set_fd",
 				},
 			},
 			&manager.ProbeSelector{
@@ -203,6 +203,7 @@ type sslProgram struct {
 	sockFDMap *ebpf.Map
 	manager   *errtelemetry.Manager
 	watcher   *sharedlibraries.Watcher
+	istio     *istioMonitor
 }
 
 var _ subprogram = &sslProgram{}
@@ -238,6 +239,7 @@ func newSSLProgram(c *config.Config, m *manager.Manager, sockFDMap *ebpf.Map, bp
 		cfg:       c,
 		sockFDMap: sockFDMap,
 		watcher:   watcher,
+		istio:     newIstioMonitor(m),
 	}
 }
 
@@ -269,10 +271,12 @@ func (o *sslProgram) ConfigureOptions(options *manager.Options) {
 
 func (o *sslProgram) Start() {
 	o.watcher.Start()
+	o.istio.Start()
 }
 
 func (o *sslProgram) Stop() {
 	o.watcher.Stop()
+	o.istio.Stop()
 }
 
 func addHooks(m *manager.Manager, probes []manager.ProbesSelector) func(utils.FilePath) error {
