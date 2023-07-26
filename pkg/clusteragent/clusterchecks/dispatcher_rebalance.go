@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/DataDog/datadog-agent/pkg/clusteragent/clusterchecks/types"
+	"github.com/DataDog/datadog-agent/pkg/config"
 	le "github.com/DataDog/datadog-agent/pkg/util/kubernetes/apiserver/leaderelection/metrics"
 	"github.com/DataDog/datadog-agent/pkg/util/log"
 )
@@ -21,6 +22,8 @@ import (
 // by moving a check from a node to another if destNodeBusyness + checkWeight < srcNodeBusyness*tolerationMargin
 // the 0.9 value is tentative and could be changed
 const tolerationMargin float64 = 0.9
+
+const minPercentageImprovement float64 = 5
 
 // Weight holds a node name and the corresponding busyness score
 type Weight struct {
@@ -164,9 +167,17 @@ func (d *dispatcher) moveCheck(src, dest, checkID string) error {
 	return nil
 }
 
+func (d *dispatcher) rebalance() []types.RebalanceResponse {
+	if config.Datadog.GetBool("cluster_checks.greedy_rebalancing_enabled") {
+		return d.greedyRebalance()
+	}
+
+	return d.originalRebalance()
+}
+
 // rebalance tries to optimize the checks repartition on cluster level check
 // runners with less possible check moves based on the runner stats.
-func (d *dispatcher) rebalance() []types.RebalanceResponse {
+func (d *dispatcher) originalRebalance() []types.RebalanceResponse {
 	// Collect CLC runners stats and update cache before rebalancing
 	d.updateRunnersStats()
 
@@ -233,4 +244,110 @@ func (d *dispatcher) rebalance() []types.RebalanceResponse {
 	}
 
 	return checksMoved
+}
+
+// greedyRebalance implements an alternative rebalance algorithm.
+//
+// It's a greedy algorithm. It sorts all the cluster checks by busyness in
+// descending order, and it goes one by one placing them in the least busy node.
+// When there are several candidate nodes, first, if the current node is among
+// the candidates, it leaves the check there to avoid unnecessary check
+// schedules and unschedules. If the current node is not among the candidates,
+// it chooses the node that contains fewer checks.
+//
+// The algorithm does not try to find the optimal solution, but in most cases it
+// should find one that's good enough for our use case. The score function that
+// we use, the busyness, also has its limitations, so it does not make much
+// sense to find an optimal solution based on that.
+//
+// One of the limitations of the original rebalance algorithm that doesn't apply
+// to this one is that the original one only tries to move checks from nodes
+// where the busyness is above the average one. It can cause situations like
+// this:
+// Node 1 (1 check with busyness above avg), Node 2 (1 check with busyness above
+// avg), Node 3 (many checks but the total busyness is below avg). Nodes 4 to X
+// almost empty, but they won't receive checks from Node 3 because of the
+// limitation stated.
+func (d *dispatcher) greedyRebalance() []types.RebalanceResponse {
+	var checksMoved []types.RebalanceResponse
+
+	// Collect CLC runners stats and update cache before rebalancing
+	d.updateRunnersStats()
+
+	start := time.Now()
+	defer func() {
+		rebalancingDuration.Set(time.Since(start).Seconds(), le.JoinLeaderValue)
+	}()
+
+	currentChecksDistribution := d.currentDistribution()
+
+	proposedDistribution := newChecksDistribution(currentChecksDistribution.nodeNames())
+	for _, checkID := range currentChecksDistribution.checksSortedByBusyness() {
+		proposedDistribution.addToLeastBusy(checkID, currentChecksDistribution.busynessForCheck(checkID), currentChecksDistribution.nodeForCheck(checkID))
+	}
+
+	// We don't calculate the optimal distribution, so it might be worse than
+	// the current one.
+	currentBusynessStdDev := currentChecksDistribution.busynessStdDev()
+	proposedBusynessStdDev := proposedDistribution.busynessStdDev()
+	maxStdDev := currentBusynessStdDev * ((100 - minPercentageImprovement) / 100)
+	if proposedBusynessStdDev > maxStdDev {
+		log.Debugf("Didn't find a distribution that improves at least by %.1f %% (current busyness stddev: %.2f, found busyness stddev: %.2f)",
+			minPercentageImprovement, currentBusynessStdDev, proposedBusynessStdDev)
+		return nil
+	}
+
+	for checkID, checkStatus := range proposedDistribution.checks {
+		currentNode := currentChecksDistribution.nodeForCheck(checkID)
+		proposedNode := checkStatus.node
+
+		if proposedNode == currentNode {
+			continue
+		}
+
+		rebalancingDecisions.Inc(le.JoinLeaderValue)
+
+		err := d.moveCheck(currentNode, proposedNode, checkID)
+		if err != nil {
+			log.Warnf("Cannot move check %s: %v", checkID, err)
+			continue
+		}
+
+		successfulRebalancing.Inc(le.JoinLeaderValue)
+
+		checksMoved = append(
+			checksMoved,
+			types.RebalanceResponse{
+				CheckID:        checkID,
+				CheckWeight:    currentChecksDistribution.busynessForCheck(checkID),
+				SourceNodeName: currentNode,
+				DestNodeName:   proposedNode,
+			},
+		)
+	}
+
+	return checksMoved
+}
+
+func (d *dispatcher) currentDistribution() checksDistribution {
+	var currentNodes []string
+
+	d.store.Lock()
+	defer d.store.Unlock()
+
+	for nodeName := range d.store.nodes {
+		currentNodes = append(currentNodes, nodeName)
+	}
+
+	distribution := newChecksDistribution(currentNodes)
+
+	for nodeName, nodeStoreInfo := range d.store.nodes {
+		for checkID, stats := range nodeStoreInfo.clcRunnerStats {
+			if stats.IsClusterCheck {
+				distribution.addCheck(checkID, busynessFunc(stats), nodeName)
+			}
+		}
+	}
+
+	return distribution
 }

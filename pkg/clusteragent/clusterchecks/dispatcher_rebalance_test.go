@@ -1508,3 +1508,81 @@ func TestCalculateAvg(t *testing.T) {
 	require.NoError(t, err)
 	assert.Equal(t, 5, avg)
 }
+
+func TestGreedyRebalance(t *testing.T) {
+	// checkMetricSamplesWeight affects this test. To avoid coupling this test
+	// with the actual value, overwrite here and restore after the test.
+	originalMetricSamplesWeight := checkMetricSamplesWeight
+	checkMetricSamplesWeight = 1
+	defer func() {
+		checkMetricSamplesWeight = originalMetricSamplesWeight
+	}()
+
+	testDispatcher := newDispatcher()
+
+	// To simplify the test:
+	//   - use only metric samples.
+	//   - fill the store manually to avoid having to fetch the information from
+	//   the API exposed by the check runners.
+	//   - use basic example with only 3 checks and 2 nodes because there are
+	//   other tests specific for the checksDistribution struct that test more
+	//   complex scenarios.
+
+	testDispatcher.store.active = true
+	testDispatcher.store.nodes["node1"] = newNodeStore("node1", "")
+	testDispatcher.store.nodes["node2"] = newNodeStore("node2", "")
+	testDispatcher.store.nodes["node1"].clcRunnerStats = map[string]types.CLCRunnerStats{
+		// This is the check with the highest busyness. The code will try to
+		// place this one first, but it'll give precedence to the node where the
+		// check is already running, so the check won't move.
+		"check1": {
+			MetricSamples:  3,
+			IsClusterCheck: true,
+		},
+		// This check should be moved.
+		"check2": {
+			MetricSamples:  2,
+			IsClusterCheck: true,
+		},
+		// This check is not a cluster check, so it won't be moved.
+		"check3": {
+			MetricSamples:  1,
+			IsClusterCheck: false,
+		},
+	}
+
+	checksMoved := testDispatcher.greedyRebalance()
+
+	requireNotLocked(t, testDispatcher.store)
+
+	// Check that the internal state has been updated
+	expectedStatsNode1 := types.CLCRunnersStats{
+		"check1": {
+			MetricSamples:  3,
+			IsClusterCheck: true,
+		},
+		"check3": {
+			MetricSamples:  1,
+			IsClusterCheck: false,
+		},
+	}
+	expectedStatsNode2 := types.CLCRunnersStats{
+		"check2": {
+			MetricSamples:  2,
+			IsClusterCheck: true,
+		},
+	}
+	assert.Equal(t, expectedStatsNode1, testDispatcher.store.nodes["node1"].clcRunnerStats)
+	assert.Equal(t, expectedStatsNode2, testDispatcher.store.nodes["node2"].clcRunnerStats)
+
+	// Check response
+	require.Len(t, checksMoved, 1)
+	assert.Equal(t, "check2", checksMoved[0].CheckID)
+	assert.Equal(t, 2, checksMoved[0].CheckWeight)
+	assert.Equal(t, "node1", checksMoved[0].SourceNodeName)
+	assert.Equal(t, "node2", checksMoved[0].DestNodeName)
+
+	// There have been no changes, so there shouldn't be a better solution.
+	checksMoved = testDispatcher.greedyRebalance()
+	assert.Empty(t, checksMoved)
+}
