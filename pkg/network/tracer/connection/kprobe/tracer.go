@@ -227,7 +227,8 @@ func loadTracerFromAsset(buf bytecode.AssetReader, runtimeTracer, coreTracer boo
 		}
 	}
 
-	// Replace with Percpu maps if kernel supports
+	// Replace with map error telemetry and helper error telemetry maps with
+	// per-cpu maps if kernel supports them.
 	if perCPUSupported() {
 		if mgrOpts.MapSpecEditors == nil {
 			mgrOpts.MapSpecEditors = make(map[string]manager.MapSpecEditor)
