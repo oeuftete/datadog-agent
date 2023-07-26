@@ -112,7 +112,7 @@ func (wcs *WinCrashStatus) getCurrentCrashSettings() error {
 		}
 		// check for existence
 		_, err = os.Stat(fn)
-		if err != nil {
+		if err == nil {
 			wcs.FileName = fn
 		}
 
