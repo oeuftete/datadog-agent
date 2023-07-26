@@ -16,7 +16,7 @@ import (
 	"fmt"
 	"strings"
 	"unsafe"
-	
+
 	"github.com/DataDog/datadog-agent/pkg/util/log"
 )
 
