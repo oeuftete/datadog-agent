@@ -78,7 +78,7 @@ func (pc *ProcessCacheEntry) Exec(entry *ProcessCacheEntry) {
 
 	// use exec time as exit time
 	pc.Exit(entry.ExecTime)
-	entry.Process.IsExecChild = true
+	entry.Process.IsExecChild = !pc.IsThread
 
 	// keep some context
 	copyProcessContext(pc, entry)

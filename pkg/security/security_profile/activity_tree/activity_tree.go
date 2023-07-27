@@ -452,6 +452,8 @@ func (at *ActivityTree) CreateProcessNode(entry *model.ProcessCacheEntry, branch
 		// we haven't found anything, create a new ProcessActivityNode for the input processCacheEntry
 		if !dryRun {
 			node = NewProcessNode(entry, generationType, resolvers)
+			node.Process.IsExecChild = entry.Parent != nil && entry.Ancestor.Parent != nil && entry.Ancestor.Parent.Pid == entry.Process.Pid
+
 			// insert in the list of children
 			parentNode.Children = append(parentNode.Children, node)
 			at.Stats.ProcessNodes++
