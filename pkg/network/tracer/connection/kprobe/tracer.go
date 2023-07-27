@@ -327,11 +327,11 @@ func isCORETracerSupported() error {
 		return nil
 	}
 
-	hostInfo := host.GetStatusInformation()
+	platform := host.GetPlatformName()
 	// centos/redhat distributions we support
 	// can have kernel versions < 4, and
 	// CO-RE is supported there
-	if hostInfo.Platform == "centos" || hostInfo.Platform == "redhat" {
+	if platform == "centos" || platform == "redhat" {
 		return nil
 	}
 

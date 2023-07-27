@@ -258,14 +258,14 @@ func TestCORETracerSupported(t *testing.T) {
 	kv, err := kernel.HostVersion()
 	require.NoError(t, err)
 
-	hostInfo := host.GetStatusInformation()
+	platform := host.GetPlatformName()
 
 	cfg := config.New()
 	cfg.EnableCORE = true
 	cfg.AllowRuntimeCompiledFallback = false
 	_, _, err = LoadTracer(cfg, nil, manager.Options{}, nil)
 	assert.False(t, prebuiltCalled)
-	if kv < kernel.VersionCode(4, 4, 128) && hostInfo.Platform != "centos" && hostInfo.Platform != "redhat" {
+	if kv < kernel.VersionCode(4, 4, 128) && platform != "centos" && platform != "redhat" {
 		assert.False(t, coreCalled)
 		assert.ErrorIs(t, err, errCORETracerNotSupported)
 	} else {
@@ -278,7 +278,7 @@ func TestCORETracerSupported(t *testing.T) {
 	cfg.AllowRuntimeCompiledFallback = true
 	_, _, err = LoadTracer(cfg, nil, manager.Options{}, nil)
 	assert.NoError(t, err)
-	if kv < kernel.VersionCode(4, 4, 128) && hostInfo.Platform != "centos" && hostInfo.Platform != "redhat" {
+	if kv < kernel.VersionCode(4, 4, 128) && platform != "centos" && platform != "redhat" {
 		assert.False(t, coreCalled)
 		assert.True(t, prebuiltCalled)
 	} else {

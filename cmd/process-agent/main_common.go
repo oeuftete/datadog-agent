@@ -88,8 +88,7 @@ func runAgent(globalParams *command.GlobalParams, exit chan struct{}) {
 	}
 
 	// Now that the logger is configured log host info
-	hostStatus := host.GetStatusInformation()
-	log.Infof("running on platform: %s", hostStatus.Platform)
+	log.Infof("running on platform: %s", host.GetPlatformName())
 	agentVersion, _ := version.Agent()
 	log.Infof("running version: %s", agentVersion.GetNumberAndPre())
 

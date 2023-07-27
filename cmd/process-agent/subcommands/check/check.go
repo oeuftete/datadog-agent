@@ -108,8 +108,7 @@ func runCheckCmd(deps dependencies) error {
 	defer cancel()
 
 	// Now that the logger is configured log host info
-	hostStatus := host.GetStatusInformation()
-	deps.Log.Infof("running on platform: %s", hostStatus.Platform)
+	deps.Log.Infof("running on platform: %s", host.GetPlatformName())
 	agentVersion, _ := version.Agent()
 	deps.Log.Infof("running version: %s", agentVersion.GetNumberAndPre())
 
