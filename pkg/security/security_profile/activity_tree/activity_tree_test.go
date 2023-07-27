@@ -124,9 +124,22 @@ func newExecTestEventWithAncestors(lineage []model.Process) *model.Event {
 	}
 
 	cursor := ancestor
+	maxPid := uint32(len(lineageDup)) + 1
+
+	nextPid := func(current uint32, isExecChild bool) uint32 {
+		if isExecChild {
+			return current
+		}
+		return current - 1
+	}
+
+	currentPid := maxPid - 1
 	for _, p := range lineageDup[1:] {
 		cursor.Process = p
+		cursor.Process.Pid = currentPid
+		currentPid = nextPid(currentPid, cursor.Process.IsExecChild)
 		cursor.Ancestor = new(model.ProcessCacheEntry)
+		cursor.Parent = &cursor.Ancestor.Process
 		cursor = cursor.Ancestor
 	}
 
@@ -145,6 +158,8 @@ func newExecTestEventWithAncestors(lineage []model.Process) *model.Event {
 		},
 	}
 
+	lineageDup[0].Pid = nextPid(maxPid, !lineageDup[0].IsExecChild)
+
 	evt := &model.Event{
 		Type:             uint32(model.ExecEventType),
 		FieldHandlers:    &model.DefaultFieldHandlers{},
@@ -157,6 +172,7 @@ func newExecTestEventWithAncestors(lineage []model.Process) *model.Event {
 			ProcessContext: model.ProcessContext{
 				Process:  lineageDup[0],
 				Ancestor: ancestor,
+				Parent:   &ancestor.Process,
 			},
 		},
 	}
