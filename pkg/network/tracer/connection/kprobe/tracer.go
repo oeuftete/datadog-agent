@@ -174,15 +174,6 @@ func LoadTracer(cfg *config.Config, m *manager.Manager, mgrOpts manager.Options,
 	return closeFn, TracerTypePrebuilt, err
 }
 
-func perCPUSupported() bool {
-	kv, err := kernel.HostVersion()
-	if err != nil {
-		return false
-	}
-
-	return kv >= kernel.VersionCode(4, 7, 0)
-}
-
 func loadTracerFromAsset(buf bytecode.AssetReader, runtimeTracer, coreTracer bool, config *config.Config, m *manager.Manager, mgrOpts manager.Options, perfHandlerTCP *ddebpf.PerfHandler) (func(), error) {
 	if err := initManager(m, config, perfHandlerTCP, runtimeTracer); err != nil {
 		return nil, fmt.Errorf("could not initialize manager: %w", err)
@@ -229,7 +220,7 @@ func loadTracerFromAsset(buf bytecode.AssetReader, runtimeTracer, coreTracer boo
 
 	// Replace with map error telemetry and helper error telemetry maps with
 	// per-cpu maps if kernel supports them.
-	if perCPUSupported() {
+	if features.HaveMapType(ebpf.PerCPUHash) == nil {
 		if mgrOpts.MapSpecEditors == nil {
 			mgrOpts.MapSpecEditors = make(map[string]manager.MapSpecEditor)
 		}
