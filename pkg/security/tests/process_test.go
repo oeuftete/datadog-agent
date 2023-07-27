@@ -25,8 +25,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/DataDog/datadog-agent/pkg/security/probe/constantfetch"
-
 	"github.com/avast/retry-go/v4"
 	"github.com/oliveagle/jsonpath"
 	"github.com/stretchr/testify/assert"
@@ -1879,6 +1877,7 @@ echo "Back to bash"`, python, python),
 				assertFieldStringArrayIndexedOneOf(t, event, "process.ancestors.file.name", 0, []string{"regularExec.sh"}, "ancestor file name not an option")
 			},
 		},
+
 		{
 			name: "regular exec without interpreter rule",
 			rule: &rules.RuleDefinition{
@@ -1973,9 +1972,16 @@ chmod 755 pyscript.py
 		//		},
 	}
 
-	var ruleList []*rules.RuleDefinition
+	ruleList := []*rules.RuleDefinition{
+		{
+			ID:         "test_testsuite_exec",
+			Expression: `exec.file.name.length >= 0 && process.ancestors.file.name == "testsuite"`, // get all exec from the testsuite
+		},
+	}
+
 	for _, test := range tests {
 		test.rule.Expression += "  && process.parent.file.name == \"" + test.scriptName + "\""
+		test.rule.Tags = map[string]string{"ruleset": "threat_score"}
 		ruleList = append(ruleList, test.rule)
 	}
 
@@ -1994,7 +2000,7 @@ chmod 755 pyscript.py
 			defer os.Remove(scriptLocation)
 			defer os.Remove(test.innerScriptName) // script created by script is in working directory
 
-			testModule.WaitSignal(t, func() error {
+			testModule.WaitSignals(t, func() error {
 				cmd := exec.Command(scriptLocation)
 				output, scriptRunErr := cmd.CombinedOutput()
 				if scriptRunErr != nil {
@@ -2002,14 +2008,15 @@ chmod 755 pyscript.py
 				}
 				t.Logf(string(output))
 
-				offsets, _ := testModule.probe.GetOffsetConstants()
-				t.Logf("%s: %+v\n", constantfetch.OffsetNameLinuxBinprmStructFile, offsets[constantfetch.OffsetNameLinuxBinprmStructFile])
-
 				return nil
-			}, testModule.validateExecEvent(t, noWrapperType, func(event *model.Event, rule *rules.Rule) {
-				assertTriggeredRule(t, rule, test.rule.ID)
-				test.check(event)
-			}))
+			}, testModule.filterRule(test.rule.ID),
+				func(event *model.Event, rule *rules.Rule) error {
+					testModule.validateExecEvent(t, noWrapperType, func(event *model.Event, rule *rules.Rule) {
+						assertTriggeredRule(t, rule, test.rule.ID)
+						test.check(event)
+					})
+					return nil
+				})
 		})
 	}
 }
