@@ -1219,7 +1219,7 @@ func (err ErrSkipEvent) Error() string {
 	return err.msg
 }
 
-func (tm *testModule) minifyEvent(event *model.Event) (string, error) {
+func (tm *testModule) minifyEvent(event *model.Event, stripAncestors bool) (string, error) {
 	eventJSON, err := tm.marshalEvent(event)
 	if err != nil {
 		return "", err
@@ -1238,7 +1238,9 @@ func (tm *testModule) minifyEvent(event *model.Event) (string, error) {
 			delete(parent, "credentials")
 		}
 		delete(processMap, "credentials")
-		delete(processMap, "ancestors")
+		if stripAncestors {
+			delete(processMap, "ancestors")
+		}
 	}
 
 	if eventJSON, err := json.MarshalIndent(m, "", "  "); err != nil {
@@ -1287,7 +1289,7 @@ func (tm *testModule) filterRule(ruleIDs ...string) func(event *model.Event, rul
 func (tm *testModule) matchRule(ruleIDs ...string) func(event *model.Event, rule *rules.Rule) error {
 	return func(event *model.Event, rule *rules.Rule) error {
 		if found := searchTriggeredRules(event, ruleIDs...); !found {
-			eventJSON, _ := tm.minifyEvent(event)
+			eventJSON, _ := tm.minifyEvent(event, true)
 			return fmt.Errorf("expected rules %+v not found in %+v, %s was triggered by %s", ruleIDs, event.Rules, rule.Definition.ID, eventJSON)
 		}
 		return nil
@@ -1296,7 +1298,7 @@ func (tm *testModule) matchRule(ruleIDs ...string) func(event *model.Event, rule
 
 func (tm *testModule) assertPassedRule(tb testing.TB, event *model.Event, ruleIDs ...string) error {
 	if !searchTriggeredRules(event, ruleIDs...) {
-		eventJSON, _ := tm.minifyEvent(event)
+		eventJSON, _ := tm.minifyEvent(event, true)
 		tb.Errorf("expected rules %+v not found in %+v (triggered by %s)", ruleIDs, event.Rules, eventJSON)
 	}
 	return nil
