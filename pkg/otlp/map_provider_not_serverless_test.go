@@ -31,7 +31,7 @@ func TestNewMap(t *testing.T) {
 			pcfg: PipelineConfig{
 				OTLPReceiverConfig: testutil.OTLPConfigFromPorts("bindhost", 1234, 0),
 				TracePort:          5003,
-				HealthPort:         5004,
+				HealthEndpoint:     "localhost:5004",
 				TracesEnabled:      true,
 				Debug: map[string]interface{}{
 					"loglevel": "disabled",
@@ -89,7 +89,7 @@ func TestNewMap(t *testing.T) {
 			pcfg: PipelineConfig{
 				OTLPReceiverConfig: testutil.OTLPConfigFromPorts("bindhost", 0, 1234),
 				TracePort:          5003,
-				HealthPort:         5004,
+				HealthEndpoint:     "localhost:5004",
 				TracesEnabled:      true,
 				MetricsEnabled:     true,
 				Metrics: map[string]interface{}{
@@ -175,7 +175,7 @@ func TestNewMap(t *testing.T) {
 			pcfg: PipelineConfig{
 				OTLPReceiverConfig: testutil.OTLPConfigFromPorts("bindhost", 0, 1234),
 				TracePort:          5003,
-				HealthPort:         5004,
+				HealthEndpoint:     "localhost:5004",
 				TracesEnabled:      true,
 				MetricsEnabled:     true,
 				Metrics: map[string]interface{}{
@@ -261,7 +261,7 @@ func TestNewMap(t *testing.T) {
 			pcfg: PipelineConfig{
 				OTLPReceiverConfig: testutil.OTLPConfigFromPorts("bindhost", 1234, 5678),
 				TracePort:          5003,
-				HealthPort:         5004,
+				HealthEndpoint:     "localhost:5004",
 				TracesEnabled:      true,
 				Debug: map[string]interface{}{
 					"loglevel": "disabled",
@@ -322,7 +322,7 @@ func TestNewMap(t *testing.T) {
 			pcfg: PipelineConfig{
 				OTLPReceiverConfig: testutil.OTLPConfigFromPorts("bindhost", 0, 1234),
 				TracePort:          5003,
-				HealthPort:         5004,
+				HealthEndpoint:     "localhost:5004",
 				MetricsEnabled:     true,
 				Metrics: map[string]interface{}{
 					"delta_ttl":                                1500,
@@ -395,7 +395,7 @@ func TestNewMap(t *testing.T) {
 			pcfg: PipelineConfig{
 				OTLPReceiverConfig: testutil.OTLPConfigFromPorts("bindhost", 1234, 0),
 				TracePort:          5003,
-				HealthPort:         5004,
+				HealthEndpoint:     "localhost:5004",
 				TracesEnabled:      true,
 				Debug: map[string]interface{}{
 					"loglevel": "info",
@@ -456,7 +456,7 @@ func TestNewMap(t *testing.T) {
 			pcfg: PipelineConfig{
 				OTLPReceiverConfig: testutil.OTLPConfigFromPorts("bindhost", 0, 1234),
 				TracePort:          5003,
-				HealthPort:         5004,
+				HealthEndpoint:     "localhost:5004",
 				MetricsEnabled:     true,
 				Metrics: map[string]interface{}{
 					"delta_ttl":                                1500,
@@ -530,7 +530,7 @@ func TestNewMap(t *testing.T) {
 			pcfg: PipelineConfig{
 				OTLPReceiverConfig: testutil.OTLPConfigFromPorts("bindhost", 0, 1234),
 				TracePort:          5003,
-				HealthPort:         5004,
+				HealthEndpoint:     "localhost:5004",
 				TracesEnabled:      true,
 				MetricsEnabled:     true,
 				Metrics: map[string]interface{}{
@@ -618,7 +618,7 @@ func TestNewMap(t *testing.T) {
 				OpenCensusReceiverConfig: map[string]interface{}{"key": "value", "k2": "v2"},
 				OTLPReceiverConfig:       testutil.OTLPConfigFromPorts("bindhost", 0, 1234),
 				TracePort:                5003,
-				HealthPort:               5004,
+				HealthEndpoint:           "localhost:5004",
 				TracesEnabled:            true,
 				MetricsEnabled:           true,
 				Metrics: map[string]interface{}{

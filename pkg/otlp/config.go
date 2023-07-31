@@ -77,11 +77,6 @@ func FromAgentConfig(cfg config.Component) (PipelineConfig, error) {
 	if err != nil {
 		errs = append(errs, fmt.Errorf("internal trace port is invalid: %w", err))
 	}
-	healthPort, err := portToUint(cfg.GetInt(coreconfig.OTLPHealthPort))
-	if err != nil {
-		errs = append(errs, fmt.Errorf("health port is invalid: %w", err))
-	}
-
 	metricsEnabled := cfg.GetBool(coreconfig.OTLPMetricsEnabled)
 	tracesEnabled := cfg.GetBool(coreconfig.OTLPTracesEnabled)
 	logsEnabled := cfg.GetBool(coreconfig.OTLPLogsEnabled)
@@ -91,12 +86,16 @@ func FromAgentConfig(cfg config.Component) (PipelineConfig, error) {
 	metricsConfig := readConfigSection(cfg, coreconfig.OTLPMetrics)
 	debugConfig := readConfigSection(cfg, coreconfig.OTLPDebug)
 
+	health := coreconfig.DefaultOTELHealthEndpoint
+	if v := cfg.GetString(coreconfig.OTLPHealthEndpoint); v != "" {
+		health = v
+	}
 	return PipelineConfig{
 		OTLPReceiverConfig:       otlpConfig.ToStringMap(),
 		OpenCensusReceiverConfig: censusConfig.ToStringMap(),
 		OpenCensusEnabled:        hasSection(cfg, "opencensus"),
 		TracePort:                tracePort,
-		HealthPort:               healthPort,
+		HealthEndpoint:           health,
 		MetricsEnabled:           metricsEnabled,
 		TracesEnabled:            tracesEnabled,
 		LogsEnabled:              logsEnabled,

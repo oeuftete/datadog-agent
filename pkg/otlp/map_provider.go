@@ -30,7 +30,7 @@ func buildTracesMap(cfg PipelineConfig) (*confmap.Conf, error) {
 	}
 	smap := map[string]interface{}{
 		buildKey("exporters", "otlp", "endpoint"):          fmt.Sprintf("%s:%d", "localhost", cfg.TracePort),
-		buildKey("extensions", "health_check", "endpoint"): fmt.Sprintf("localhost:%d", cfg.HealthPort),
+		buildKey("extensions", "health_check", "endpoint"): cfg.HealthEndpoint,
 	}
 	if cfg.OpenCensusEnabled {
 		smap[buildKey("service", "pipelines", "traces", "receivers")] = []interface{}{"otlp", "opencensus"}
@@ -49,7 +49,7 @@ func buildMetricsMap(cfg PipelineConfig) (*confmap.Conf, error) {
 	}
 	smap := map[string]interface{}{
 		buildKey("exporters", "serializer", "metrics"):     cfg.Metrics,
-		buildKey("extensions", "health_check", "endpoint"): fmt.Sprintf("localhost:%d", cfg.HealthPort),
+		buildKey("extensions", "health_check", "endpoint"): cfg.HealthEndpoint,
 	}
 	if cfg.OpenCensusEnabled {
 		smap[buildKey("service", "pipelines", "metrics", "receivers")] = []interface{}{"otlp", "opencensus"}

@@ -107,9 +107,9 @@ type PipelineConfig struct {
 	OpenCensusReceiverConfig map[string]interface{}
 	// TracePort is the trace Agent OTLP port.
 	TracePort uint
-	// HealthPort specifies the port to use for the healtcheck endpoint. It defaults
-	// to 13133.
-	HealthPort uint
+	// HealthEndpoint specifies the endpoint for the healtcheck endpoint. It defaults
+	// to localhost:13133.
+	HealthEndpoint string
 	// MetricsEnabled states whether OTLP metrics support is enabled.
 	MetricsEnabled bool
 	// TracesEnabled states whether OTLP traces support is enabled.

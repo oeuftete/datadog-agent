@@ -3,3 +3,5 @@ otlp_config:
     protocols:
       http:
       grpc:
+  health_check:
+    endpoint: localhost:13132

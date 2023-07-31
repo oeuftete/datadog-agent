@@ -26,10 +26,11 @@ func GetOTLPStatus() map[string]interface{} {
 	}
 
 	var status, statuserr string
-	resp, err := getHTTPClient().Get(fmt.Sprintf("http://localhost:%s", config.Datadog.GetInt(config.OTLPHealthPort)))
+	resp, err := getHTTPClient().Get(fmt.Sprintf("http://%s", config.Datadog.GetInt(config.OTLPHealthEndpoint)))
 	if err != nil {
-		statuserr = fmt.Sprintf("Can not retrieve status: %s", err)
+		statuserr = fmt.Sprintf("Can not retrieve status: %w", err)
 	}
+	// drain response body
 	io.ReadAll(resp.Body) //nolint:errcheck
 	defer resp.Body.Close()
 	switch resp.StatusCode {

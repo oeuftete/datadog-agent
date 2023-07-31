@@ -67,6 +67,7 @@ func TestStartPipeline(t *testing.T) {
 	pcfg := PipelineConfig{
 		OTLPReceiverConfig: testutil.OTLPConfigFromPorts("localhost", 4317, 4318),
 		TracePort:          5003,
+		HealthEndpoint:     "localhost:13133",
 		MetricsEnabled:     true,
 		TracesEnabled:      true,
 		Metrics:            map[string]interface{}{},
