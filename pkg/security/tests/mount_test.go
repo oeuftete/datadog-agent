@@ -155,8 +155,12 @@ func TestMountPropagated(t *testing.T) {
 	//				/ test-file
 
 	ruleDefs := []*rules.RuleDefinition{{
-		ID:         "test_rule",
+		ID:         "test_chmod_rule",
+		Expression: fmt.Sprintf(`process.file.name == "testsuite" && chmod.file.path.length >= 0`), // get all chmods
+	}, {
+		ID:         "test_chmod_propagated_rule",
 		Expression: fmt.Sprintf(`chmod.file.path == "{{.Root}}/dir1-bind-mounted/test-drive/test-file"`),
+		Tags:       map[string]string{"ruleset": "threat_score"},
 	}}
 
 	test, err := newTestModule(t, nil, ruleDefs, testOpts{})
@@ -221,13 +225,14 @@ func TestMountPropagated(t *testing.T) {
 	}
 
 	t.Run("bind-mounted-chmod", func(t *testing.T) {
-		test.WaitSignal(t, func() error {
+		test.WaitSignals(t, func() error {
 			return os.Chmod(file, 0700)
-		}, func(event *model.Event, rule *rules.Rule) {
-			t.Log(event.Open.File.PathnameStr)
-			assert.Equal(t, "chmod", event.GetType(), "wrong event type")
-			assert.Equal(t, file, event.Chmod.File.PathnameStr, "wrong path")
-		})
+		}, test.filterRule("test_chmod_propagated_rule"),
+			func(event *model.Event, rule *rules.Rule) error {
+				assert.Equal(t, "chmod", event.GetType(), "wrong event type")
+				assert.Equal(t, file, event.Chmod.File.PathnameStr, "wrong path")
+				return nil
+			})
 	})
 }
 
