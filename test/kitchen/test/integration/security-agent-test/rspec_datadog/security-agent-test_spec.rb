@@ -47,7 +47,9 @@ shared_examples "passes" do |bundle, env|
   base_env = {
     "CI"=>"true",
     "DD_SYSTEM_PROBE_BPF_DIR"=>"/tmp/security-agent/ebpf_bytecode",
-    "GOVERSION"=>"unknown"
+    "GOVERSION"=>"unknown",
+    "LC_ALL"=>"C.UTF-8",
+    "LANG"=>"C.UTF-8"
   }
   final_env = base_env.merge(env)
 
