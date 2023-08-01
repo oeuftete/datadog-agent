@@ -696,6 +696,20 @@ func TestDogstatsdMappingProfilesEnv(t *testing.T) {
 	assert.Equal(t, mappings, expected)
 }
 
+func TestDogstatsdMappingProfilesEnvTwo(t *testing.T) {
+	env := "DD_DOGSTATSD_MAPPER_PROFILES"
+	t.Setenv(env, `[{"mappings":[{"match":"sidekiq\\.sidekiq\\.(.*)","match_type":"regex","name":"sidekiq.$1"},{"match":"sidekiq\\.jobs\\.(.*)\\.perform","match_type":"regex","name":"sidekiq.jobs.perform","tags":{"worker":"$1"}},{"match":"sidekiq\\.jobs\\.(.*)\\.(count|success|failure)","match_type":"regex","name":"sidekiq.jobs.worker.$2","tags":{"worker":"$1"}}],"name":"sidekiq","prefix":"sidekiq."}]`)
+	expected := []MappingProfile{
+		{Name: "sidekiq", Prefix: "sidekiq.", Mappings: []MetricMapping{
+			{Match: "sidekiq\\.sidekiq\\.(.*)", MatchType: "regex", Name: "sidekiq.$1", Tags: nil},
+			{Match: "sidekiq\\.jobs\\.(.*)\\.perform", MatchType: "regex", Name: "sidekiq.jobs.perform", Tags: map[string]string{"worker": "$1"}},
+			{Match: "sidekiq\\.jobs\\.(.*)\\.(count|success|failure)", MatchType: "regex", Name: "sidekiq.jobs.worker.$2", Tags: map[string]string{"worker": "$1"}},
+		}},
+	}
+	mappings, _ := GetDogstatsdMappingProfiles()
+	assert.Equal(t, mappings, expected)
+}
+
 func TestGetValidHostAliasesWithConfig(t *testing.T) {
 	config := SetupConfFromYAML(`host_aliases: ["foo", "-bar"]`)
 	assert.EqualValues(t, getValidHostAliasesWithConfig(config), []string{"foo"})

@@ -353,6 +353,52 @@ dogstatsd_mapper_profiles:
 	}
 }
 
+func TestEnvMappings(t *testing.T) {
+	scenarios := []struct {
+		name            string
+		config          string
+		packets         []string
+		expectedResults []MapResult
+	}{
+		{
+			name:   "Simple OK case",
+			config: `[{"mappings":[{"match":"sidekiq\\.sidekiq\\.(.*)","match_type":"regex","name":"sidekiq.$1"},{"match":"sidekiq\\.jobs\\.(.*)\\.perform","match_type":"regex","name":"sidekiq.jobs.perform","tags":{"worker":"$1"}},{"match":"sidekiq\\.jobs\\.(.*)\\.(count|success|failure)","match_type":"regex","name":"sidekiq.jobs.worker.$2","tags":{"worker":"$1"}}],"name":"sidekiq","prefix":"sidekiq."}]`,
+			packets: []string{
+				"sidekiq.sidekiq.foo",
+				"sidekiq.jobs.foo.perform",
+				"sidekiq.jobs.foo.failure",
+			},
+			expectedResults: []MapResult{
+				{Name: "sidekiq.foo", Tags: []string{}, matched: true},
+				{Name: "sidekiq.jobs.perform", Tags: []string{"worker:foo"}, matched: true},
+				{Name: "sidekiq.jobs.worker.failure", Tags: []string{"worker:foo"}, matched: true},
+			},
+		},
+	}
+
+	for _, scenario := range scenarios {
+		t.Run(scenario.name, func(t *testing.T) {
+			mapper, err := getEnvMapper(t, scenario.config)
+			require.NoError(t, err)
+
+			var actualResults []MapResult
+			for _, packet := range scenario.packets {
+				mapResult := mapper.Map(packet)
+				if mapResult != nil {
+					actualResults = append(actualResults, *mapResult)
+				}
+			}
+			for _, sample := range scenario.expectedResults {
+				sort.Strings(sample.Tags)
+			}
+			for _, sample := range actualResults {
+				sort.Strings(sample.Tags)
+			}
+			assert.Equal(t, scenario.expectedResults, actualResults, "Case `%s` failed. `%s` should be `%s`; mapper profiles: %s", scenario.name, actualResults, scenario.expectedResults, mapper.Profiles)
+		})
+	}
+}
+
 func TestMappingErrors(t *testing.T) {
 	scenarios := []struct {
 		name          string
@@ -527,6 +573,18 @@ func getMapper(t *testing.T, configString string) (*MetricMapper, error) {
 		return nil, err
 	}
 	mapper, err := NewMetricMapper(profiles, 1000)
+	if err != nil {
+		return nil, err
+	}
+	return mapper, err
+}
+
+func getEnvMapper(t *testing.T, configString string) (*MetricMapper, error) {
+	env := "DD_DOGSTATSD_MAPPER_PROFILES"
+	t.Setenv(env, configString)
+
+	mappings, _ := config.GetDogstatsdMappingProfiles()
+	mapper, err := NewMetricMapper(mappings, 1000)
 	if err != nil {
 		return nil, err
 	}
