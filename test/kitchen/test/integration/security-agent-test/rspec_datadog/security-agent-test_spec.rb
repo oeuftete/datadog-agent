@@ -8,6 +8,7 @@ require 'rexml/document'
 
 print KernelOut.format(`cat /etc/os-release`)
 print KernelOut.format(`uname -a`)
+print `env`
 
 arch = `uname -m`.strip
 release = `uname -r`.strip
