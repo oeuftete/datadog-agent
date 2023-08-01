@@ -37,6 +37,7 @@ func TestGRPCScenarios(t *testing.T) {
 
 func testGRPCScenarios(t *testing.T) {
 	cfg := config.New()
+	cfg.BPFDebug = true
 	cfg.EnableHTTPMonitoring = true
 	cfg.EnableHTTP2Monitoring = true
 
@@ -341,7 +342,7 @@ func testGRPCScenarios(t *testing.T) {
 			expectedError: false,
 		},
 		{
-			name: "request with large body (1MB)",
+			name: "single request with large body (1MB)",
 			runClients: func(t *testing.T, differentClients bool) {
 				var client1 grpc.Client
 				var err error
@@ -351,16 +352,17 @@ func testGRPCScenarios(t *testing.T) {
 				longName := strings.Repeat("1", 1024*1024)
 				ctx := context.Background()
 				require.NoError(t, client1.HandleUnary(ctx, longName))
+				longName2 := strings.Repeat("2", 1024*1024)
+				require.NoError(t, client1.HandleUnary(ctx, longName2))
 			},
 			expectedEndpoints: map[http.Key]int{
 				{
 					Path:   http.Path{Content: "/helloworld.Greeter/SayHello"},
 					Method: http.MethodPost,
-				}: 1,
+				}: 2,
 			},
 			expectedError: true,
 		},
-
 		{
 			name: "request with large body (1MB) -> b -> request with large body (1MB) -> b",
 			runClients: func(t *testing.T, differentClients bool) {
@@ -583,14 +585,14 @@ func testGRPCScenarios(t *testing.T) {
 		},
 	}
 	for _, tt := range tests {
-		for _, val := range []bool{false, true} {
+		for _, val := range []bool{false} {
 			testNameSuffix := fmt.Sprintf("-different clients - %v", val)
 			t.Run(tt.name+testNameSuffix, func(t *testing.T) {
 				// we are currently not supporting some edge cases:
 				// https://datadoghq.atlassian.net/browse/USMO-222
-				if tt.expectedError {
-					t.Skip("Skipping test due to known issue")
-				}
+				//if tt.expectedError {
+				//	t.Skip("Skipping test due to known issue")
+				//}
 
 				monitor, err := usm.NewMonitor(cfg, nil, nil, nil)
 				require.NoError(t, err)

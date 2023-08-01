@@ -113,6 +113,7 @@ typedef enum {
     PROG_HTTP,
     PROG_HTTP2,
     PROG_KAFKA,
+    PROG_HTTP2_FRAME_PARSER,
     // Add before this value.
     PROG_MAX,
 } protocol_prog_t;
